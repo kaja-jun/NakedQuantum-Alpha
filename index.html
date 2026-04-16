@@ -254,9 +254,9 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 
 <div class="view-host">
     <!-- ENTRANCE VIEW - first screen (added) -->
-  <div class="view-panel entrance-view" id="view-entrance" style="display:none; background:var(--bg); align-items:center; justify-content:center; padding:40px 24px; text-align:center;">
+  <!-- ENTRANCE VIEW - full separate first page -->
+  <div class="view-panel entrance-view" id="view-entrance" style="display:none; z-index:9999; background:var(--bg); align-items:center; justify-content:center; padding:40px 24px; text-align:center;">
     <div class="nq-wordmark" style="font-size:14px; margin-bottom:60px; opacity:0.6; letter-spacing:4px;">NAKEDQUANTUM</div>
-    
     <div id="entrance-question" class="entrance-question" style="font-family:var(--font-serif); font-size:22px; line-height:1.4; max-width:620px; color:var(--text); margin-bottom:40px; min-height:132px;">
       Are you staring at existence right now, or is existence staring back through you?
     </div>
@@ -936,11 +936,25 @@ let currentQuestionText = "";
 
 async function loadEntrance() {
   if (localStorage.getItem('nq_entrance_seen') === 'true') return;
-  
+
+  // Hide every other view first
+  document.querySelectorAll('.view-panel').forEach(v => {
+    if (v.id !== 'view-entrance') v.classList.add('hidden');
+  });
+
   const entrance = document.getElementById('view-entrance');
   entrance.style.display = 'flex';
   showRandomQuestion();
 }
+
+document.getElementById('btn-enter-abyss').addEventListener('click', () => {
+  localStorage.setItem('nq_entrance_seen', 'true');
+  document.getElementById('view-entrance').style.display = 'none';
+  
+  // Show the main soup (your normal app)
+  document.getElementById('view-soup').classList.remove('hidden');
+  renderTableView();   // refreshes the folder list
+});
 
 function showRandomQuestion() {
   currentQuestionText = coreQuestions[Math.floor(Math.random() * coreQuestions.length)];
