@@ -26,6 +26,13 @@ const showToast = (msg) => {
   setTimeout(() => t.style.opacity = "0", 2000);
 };
 
+const showModeToast = (msg) => {
+  const t = document.getElementById('mode-toast');
+  if(!t) return;
+  t.textContent = msg; t.style.opacity = "1";
+  setTimeout(() => t.style.opacity = "0", 1500);
+};
+
 function escHtml(str) {
   if (!str) return "";
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -68,10 +75,10 @@ class FireflyManager {
 }
 const fireflyManager = new FireflyManager();
 
-/* --- 4. DATABASE ENGINE --- */
+/* --- 4. DATABASE ENGINE (VERSION 4 BUMP) --- */
 async function initDB() {
   return new Promise((resolve) => {
-    const req = indexedDB.open("NakedQuantumDB", 1);
+    const req = indexedDB.open("NakedQuantumDB", 4); // Bumped to force clear the jam
     req.onupgradeneeded = (e) => {
       const d = e.target.result;
       const stores = ["folders", "discourses", "characters", "history"];
@@ -83,67 +90,85 @@ async function initDB() {
       });
     };
     req.onsuccess = (e) => { db = e.target.result; resolve(db); };
-    req.onerror = () => resolve(null);
+    req.onerror = (e) => { console.error("DB Error", e); resolve(null); };
+    req.onblocked = () => { console.warn("DB Blocked by another tab"); resolve(null); };
   });
 }
 
 const dbCall = (store, method, ...args) => new Promise(r => {
   if (!db) return r(null);
-  const tx = db.transaction(store, "readwrite");
-  const req = tx.objectStore(store)[method](...args);
-  req.onsuccess = () => r(req.result);
-  req.onerror = () => r(null);
+  try {
+    const tx = db.transaction(store, "readwrite");
+    const req = tx.objectStore(store)[method](...args);
+    req.onsuccess = () => r(req.result);
+    req.onerror = () => r(null);
+  } catch (err) {
+    console.error(`DB ${method} failed on ${store}`, err);
+    r(null);
+  }
 });
 
 /* --- 5. VIEW & MODE SWITCHING --- */
+async function refresh() {
+  if (currentMode === 'soup') await renderSoup();
+}
+
 function switchView(viewId) {
   ['view-soup', 'view-sanctuary', 'view-void'].forEach(id => {
-    document.getElementById(id).classList.add('hidden');
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
   });
-  document.getElementById(viewId).classList.remove('hidden');
-  document.getElementById('fab-container').style.display = (viewId === 'view-soup') ? 'flex' : 'none';
+  const activeView = document.getElementById(viewId);
+  if (activeView) activeView.classList.remove('hidden');
+  
+  const fab = document.getElementById('fab-container');
+  if (fab) fab.style.display = (viewId === 'view-soup') ? 'flex' : 'none';
 }
 
 const wordmark = document.getElementById('nq-wordmark');
 let wordmarkPressTimer = null;
-wordmark.addEventListener('touchstart', () => {
-  wordmark.classList.add('pressing');
-  wordmarkPressTimer = setTimeout(() => {
-    wordmark.classList.remove('pressing');
-    currentMode = currentMode === 'soup' ? 'sanctuary' : 'soup';
-    switchView(currentMode === 'soup' ? 'view-soup' : 'view-sanctuary');
-    updateHeaderActions();
-    haptic('heavy');
-    const t = document.getElementById('mode-toast');
-    t.textContent = currentMode === 'soup' ? '✦ The Soup' : '◈ The Sanctuary';
-    t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 1500);
-    if (currentMode === 'soup') renderSoup();
-  }, 600);
-}, { passive: true });
-wordmark.addEventListener('touchend', () => { wordmark.classList.remove('pressing'); clearTimeout(wordmarkPressTimer); });
+
+if (wordmark) {
+  wordmark.addEventListener('touchstart', () => {
+    wordmark.classList.add('pressing');
+    wordmarkPressTimer = setTimeout(() => {
+      wordmark.classList.remove('pressing');
+      currentMode = currentMode === 'soup' ? 'sanctuary' : 'soup';
+      switchView(currentMode === 'soup' ? 'view-soup' : 'view-sanctuary');
+      updateHeaderActions();
+      haptic('heavy');
+      showModeToast(currentMode === 'soup' ? '✦ The Soup' : '◈ The Sanctuary');
+      if (currentMode === 'soup') refresh();
+    }, 600);
+  }, { passive: true });
+
+  wordmark.addEventListener('touchend', () => { wordmark.classList.remove('pressing'); clearTimeout(wordmarkPressTimer); });
+  wordmark.addEventListener('touchmove', () => { wordmark.classList.remove('pressing'); clearTimeout(wordmarkPressTimer); });
+}
 
 function updateHeaderActions() {
   const container = document.getElementById('header-actions');
+  if (!container) return;
   if (currentMode === 'soup') {
     container.innerHTML = `
-      <button class="hdr-btn" id="btn-hdr-void" title="The Void">◌</button>
       <button class="hdr-btn" id="btn-hdr-search" title="Search">⌖</button>
       <button class="hdr-btn" id="btn-hdr-sync" title="Akashic Sync">∞</button>
     `;
-    document.getElementById('btn-hdr-void').onclick = openVoid;
-    document.getElementById('btn-hdr-search').onclick = () => { closeModals(); document.getElementById('nq-overlay').classList.add('active'); document.getElementById('modal-search').classList.add('visible'); };
+    document.getElementById('btn-hdr-search').onclick = () => openModal('modal-search');
     document.getElementById('btn-hdr-sync').onclick = syncAkashic;
   } else {
     container.innerHTML = `<button class="hdr-btn" title="Lens Settings">⚙</button>`;
   }
 }
 
-/* --- 6. THE SOUP ENGINE (RENDERER) --- */
+/* --- 6. THE SOUP (RENDERING) --- */
 async function renderSoup() {
   if (currentMode !== 'soup') return;
   const container = document.getElementById('soup-content');
   const breadcrumbs = document.getElementById('soup-breadcrumbs');
+  if (!container || !breadcrumbs) return;
   
+  // Breadcrumbs
   breadcrumbs.innerHTML = '';
   breadcrumbPath.forEach((seg, idx) => {
     const btn = document.createElement('span');
@@ -152,7 +177,7 @@ async function renderSoup() {
     btn.onclick = () => {
       breadcrumbPath = breadcrumbPath.slice(0, idx + 1);
       currentFolderId = breadcrumbPath[breadcrumbPath.length - 1].id;
-      renderSoup();
+      refresh();
     };
     breadcrumbs.appendChild(btn);
     if (idx < breadcrumbPath.length - 1) {
@@ -166,6 +191,7 @@ async function renderSoup() {
   
   const folders = allFolders.filter(f => f.parent_id === currentFolderId);
   const activeDiscourses = allDiscourses.filter(d => !d.isDeleted && d.folder_id === currentFolderId);
+  
   const fragments = activeDiscourses.filter(d => d.item_type !== 'spark').sort((a,b) => b.updated_at - a.updated_at);
   const sparks = activeDiscourses.filter(d => d.item_type === 'spark').sort((a,b) => b.updated_at - a.updated_at);
 
@@ -173,27 +199,35 @@ async function renderSoup() {
   let totalLen = 0;
 
   if (folders.length > 0) {
-    container.innerHTML += `<div class="section-label">Folders</div><div class="cards-grid" id="folder-grid"></div>`;
+    container.innerHTML += `<div class="section-label" style="padding:0 16px 8px;">Folders</div><div class="cards-grid" id="folder-grid" style="padding:0 16px;"></div>`;
     const grid = document.getElementById('folder-grid');
-    folders.forEach(f => grid.appendChild(createCard('folder-card', '◈', f.name, 'Folder', f.id, 'folder')));
+    folders.forEach(f => {
+      grid.appendChild(createCard('folder-card', '◈', f.name, 'Folder', () => {
+        breadcrumbPath.push({ id: f.id, name: f.name });
+        currentFolderId = f.id; refresh();
+      }, f.id, 'folder'));
+    });
   }
 
   if (fragments.length > 0) {
-    container.innerHTML += `<div class="section-label">Fragments</div><div class="cards-grid" id="frag-grid"></div>`;
+    container.innerHTML += `<div class="section-label" style="padding:14px 16px 8px;">Fragments</div><div class="cards-grid" id="frag-grid" style="padding:0 16px;"></div>`;
     const grid = document.getElementById('frag-grid');
     fragments.forEach(d => {
       totalLen += (d.raw_text || "").length;
-      grid.appendChild(createCard('fragment-card', '✦', d.title || 'Untitled', new Date(d.updated_at).toLocaleDateString(), d.id, 'fragment'));
+      grid.appendChild(createCard('fragment-card', '✦', d.title || 'Untitled', new Date(d.updated_at).toLocaleDateString(), () => openLighthouse(d.id), d.id, 'fragment'));
     });
   }
 
   if (sparks.length > 0) {
-    container.innerHTML += `<div class="section-label" style="color:#a0d8a0;">Sparks</div><div class="cards-grid" id="spark-grid"></div>`;
+    container.innerHTML += `<div class="section-label" style="color:#a0d8a0; padding:14px 16px 8px;">Sparks</div><div class="cards-grid" id="spark-grid" style="padding:0 16px 100px;"></div>`;
     const grid = document.getElementById('spark-grid');
     sparks.forEach(s => {
       totalLen += (s.raw_text || "").length;
-      grid.appendChild(createCard('spark-card', '⚡', s.title || 'Quick Spark', new Date(s.updated_at).toLocaleDateString(), s.id, 'fragment'));
+      grid.appendChild(createCard('spark-card', '⚡', s.title || 'Quick Spark', new Date(s.updated_at).toLocaleDateString(), () => openLighthouse(s.id), s.id, 'fragment'));
     });
+  } else {
+    // Add bottom padding if no sparks
+    if (container.lastChild) container.lastChild.style.paddingBottom = "100px";
   }
 
   if (!folders.length && !fragments.length && !sparks.length) {
@@ -203,92 +237,129 @@ async function renderSoup() {
   fireflyManager.setDensity(totalLen);
 }
 
-/* --- 7. PERFECT HAPTIC LONG-PRESS --- */
-function createCard(className, icon, title, meta, id, type) {
+/* --- 7. HAPTIC LONG-PRESS (Strict Selection Kill) --- */
+let longPressFired = false;
+let lpCardElement = null;
+
+function createCard(className, icon, title, meta, clickHandler, id, type) {
   const card = document.createElement('div');
   card.className = className;
   card.innerHTML = `<div class="card-icon">${icon}</div><div class="card-name">${escHtml(title)}</div><div class="card-meta">${meta}</div>`;
   
   let lpTimer = null;
-  let isLongPress = false;
-
-  card.oncontextmenu = (e) => { e.preventDefault(); return false; };
+  card.oncontextmenu = (e) => { e.preventDefault(); return false; }; // Kill iOS Copy Menu
   
   card.addEventListener('touchstart', (e) => {
-    isLongPress = false;
-    card.style.transform = 'scale(0.96)';
+    longPressFired = false;
+    lpCardElement = card;
+    card.classList.add('long-pressing');
     lpTimer = setTimeout(() => {
-      isLongPress = true;
+      longPressFired = true;
       mgmtId = id;
       haptic('heavy');
-      card.style.transform = 'none';
-      closeModals();
-      document.getElementById('nq-overlay').classList.add('active');
-      document.getElementById('modal-mgmt').classList.add('visible');
+      card.classList.remove('long-pressing');
+      openModal('modal-mgmt');
     }, 600);
   }, { passive: true });
 
-  const cancelTouch = () => { clearTimeout(lpTimer); card.style.transform = 'none'; };
-  card.addEventListener('touchend', cancelTouch);
+  const cancelTouch = () => {
+    if (lpTimer) clearTimeout(lpTimer);
+    if (lpCardElement) lpCardElement.classList.remove('long-pressing');
+  };
+
+  card.addEventListener('touchend', (e) => {
+    cancelTouch();
+    if (longPressFired) { e.preventDefault(); longPressFired = false; }
+    else { clickHandler(); }
+  });
   card.addEventListener('touchmove', cancelTouch);
   card.addEventListener('touchcancel', cancelTouch);
 
-  card.onclick = (e) => {
-    if (isLongPress) { e.preventDefault(); return; }
-    if (type === 'folder') {
-      breadcrumbPath.push({ id, name: title }); currentFolderId = id; renderSoup();
-    } else {
-      openLighthouse(id);
-    }
+  // Fallback for mouse
+  card.onmousedown = (e) => {
+    longPressFired = false;
+    lpTimer = setTimeout(() => {
+      longPressFired = true; mgmtId = id; openModal('modal-mgmt');
+    }, 600);
   };
+  card.onmouseup = card.onmouseleave = () => {
+    clearTimeout(lpTimer);
+    if (!longPressFired) clickHandler();
+    longPressFired = false;
+  };
+
   return card;
 }
 
-/* --- 8. MANAGEMENT & MOVE LOGIC --- */
-document.getElementById('btn-mgmt-rename').onclick = async () => {
+/* --- 8. MANAGEMENT MODALS --- */
+const closeModals = () => {
+  const overlay = document.getElementById('nq-overlay');
+  if(overlay) overlay.classList.remove('active');
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
+  const fabMain = document.getElementById('fab-main');
+  const fabMenu = document.getElementById('fab-menu');
+  if(fabMain) fabMain.classList.remove('open');
+  if(fabMenu) fabMenu.classList.remove('open');
+};
+
+const openModal = (id) => {
+  closeModals();
+  const overlay = document.getElementById('nq-overlay');
+  const modal = document.getElementById(id);
+  if(overlay) overlay.classList.add('active');
+  if(modal) modal.classList.add('visible');
+};
+
+if (document.getElementById('nq-overlay')) {
+  document.getElementById('nq-overlay').onclick = closeModals;
+}
+
+// Rename
+const btnRename = document.getElementById('btn-mgmt-rename');
+if(btnRename) btnRename.onclick = async () => {
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
   const item = await dbCall(store, 'get', mgmtId);
   document.getElementById('input-rename').value = store === 'folders' ? item.name : item.title;
-  closeModals();
-  document.getElementById('nq-overlay').classList.add('active');
-  document.getElementById('modal-rename').classList.add('visible');
+  openModal('modal-rename');
+  setTimeout(() => document.getElementById('input-rename').focus(), 100);
 };
 
-document.getElementById('btn-confirm-rename').onclick = async () => {
+const btnConfirmRename = document.getElementById('btn-confirm-rename');
+if(btnConfirmRename) btnConfirmRename.onclick = async () => {
   const newName = document.getElementById('input-rename').value.trim();
   if (!newName) return;
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
   const item = await dbCall(store, 'get', mgmtId);
   if (store === 'folders') item.name = newName; else item.title = newName;
   await dbCall(store, 'put', item);
-  closeModals(); renderSoup();
+  closeModals(); refresh(); showToast("Renamed");
 };
 
-document.getElementById('btn-mgmt-move').onclick = async () => {
+// Move
+const btnMove = document.getElementById('btn-mgmt-move');
+if(btnMove) btnMove.onclick = async () => {
   const sel = document.getElementById('move-parent-select');
   sel.innerHTML = '<option value="">◈ Root</option>';
   const folders = await dbCall('folders', 'getAll') || [];
-  
   folders.filter(f => f.id !== mgmtId).forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f.id; opt.textContent = f.name;
-    sel.appendChild(opt);
+    const opt = document.createElement('option'); opt.value = f.id; opt.textContent = f.name; sel.appendChild(opt);
   });
-  closeModals();
-  document.getElementById('nq-overlay').classList.add('active');
-  document.getElementById('modal-move').classList.add('visible');
+  openModal('modal-move');
 };
 
-document.getElementById('btn-confirm-move').onclick = async () => {
+const btnConfirmMove = document.getElementById('btn-confirm-move');
+if(btnConfirmMove) btnConfirmMove.onclick = async () => {
   const newParent = document.getElementById('move-parent-select').value || null;
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
   const item = await dbCall(store, 'get', mgmtId);
   if (store === 'folders') item.parent_id = newParent; else item.folder_id = newParent;
   await dbCall(store, 'put', item);
-  closeModals(); renderSoup(); showToast("Moved ▤");
+  closeModals(); refresh(); showToast("Moved ▤");
 };
 
-document.getElementById('btn-mgmt-delete').onclick = async () => {
+// Void (Soft Delete)
+const btnDelete = document.getElementById('btn-mgmt-delete');
+if(btnDelete) btnDelete.onclick = async () => {
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
   if (store === 'folders') {
     if(confirm("Purge folder permanently?")) await dbCall('folders', 'delete', mgmtId);
@@ -298,45 +369,40 @@ document.getElementById('btn-mgmt-delete').onclick = async () => {
     await dbCall('discourses', 'put', item);
     showToast("Sent to Void ◌");
   }
-  closeModals(); renderSoup();
+  closeModals(); refresh();
 };
 
-/* --- 9. THE VOID ENGINE --- */
-async function openVoid() {
-  switchView('view-void');
-  const surface = document.getElementById('void-surface');
-  surface.innerHTML = '';
-  
-  const allDiscourses = await dbCall('discourses', 'getAll') || [];
-  const deleted = allDiscourses.filter(d => d.isDeleted).sort((a,b) => b.deleted_at - a.deleted_at);
-  
-  if (deleted.length === 0) {
-    surface.innerHTML = `<div class="placeholder-center"><h1>◌</h1><p>The Void is empty.</p></div>`;
-    return;
-  }
-  
-  deleted.forEach(d => {
-    const el = document.createElement('div');
-    el.className = 'soup-item';
-    el.innerHTML = `
-      <div class="soup-item-icon" style="color:#ff6060;">✕</div>
-      <div class="soup-item-info">
-        <div class="soup-item-name" style="text-decoration:line-through; opacity:0.6;">${escHtml(d.title || 'Untitled')}</div>
-        <div class="soup-item-meta">Deleted ${new Date(d.deleted_at).toLocaleDateString()}</div>
-      </div>
-      <button style="background:var(--surface2); color:var(--accent); border:1px solid var(--border); padding:6px 12px; border-radius:6px; font-weight:bold; margin-right:8px;" onclick="restoreItem('${d.id}')">↩</button>
-      <button style="background:var(--surface2); color:#ff6060; border:1px solid var(--danger); padding:6px 12px; border-radius:6px; font-weight:bold;" onclick="purgeItem('${d.id}')">✕</button>
-    `;
-    surface.appendChild(el);
-  });
-}
+/* --- 9. FAB & NEW CREATION LOGIC --- */
+const fabMain = document.getElementById('fab-main');
+if(fabMain) fabMain.onclick = () => {
+  fabMain.classList.toggle('open');
+  document.getElementById('fab-menu').classList.toggle('open');
+};
 
-document.getElementById('btn-close-void').onclick = () => { switchView('view-soup'); renderSoup(); };
-window.restoreItem = async (id) => { const item = await dbCall('discourses', 'get', id); item.isDeleted = false; await dbCall('discourses', 'put', item); openVoid(); };
-window.purgeItem = async (id) => { if(confirm("Erase completely?")) { await dbCall('discourses', 'delete', id); openVoid(); } };
+const btnFabFolder = document.getElementById('btn-fab-folder');
+if(btnFabFolder) btnFabFolder.onclick = () => { openModal('modal-folder'); setTimeout(() => document.getElementById('input-folder-name').focus(), 100); };
+
+const btnConfirmFolder = document.getElementById('btn-confirm-folder');
+if(btnConfirmFolder) btnConfirmFolder.onclick = async () => {
+  const name = document.getElementById('input-folder-name').value.trim();
+  if (!name) return;
+  await dbCall('folders', 'put', { id: 'f_' + Date.now(), name, parent_id: currentFolderId, created_at: Date.now() });
+  document.getElementById('input-folder-name').value = '';
+  closeModals(); refresh();
+};
+
+const btnFabFrag = document.getElementById('btn-fab-frag');
+if(btnFabFrag) btnFabFrag.onclick = () => {
+  currentDiscourseId = 'd_' + Date.now();
+  document.getElementById('lh-title').value = '';
+  document.getElementById('lh-text').value = '';
+  document.getElementById('lh-overlay').classList.add('active');
+  setLhMode('write'); closeModals();
+};
 
 /* --- 10. SPARKS ENGINE (QUICK CAPTURE) --- */
-document.getElementById('btn-fab-spark').onclick = async () => {
+const btnFabSpark = document.getElementById('btn-fab-spark');
+if(btnFabSpark) btnFabSpark.onclick = async () => {
   const fSelect = document.getElementById('spark-folder');
   fSelect.innerHTML = '<option value="">◈ Current Folder</option><option value="__new__">+ New Folder...</option>';
   
@@ -352,29 +418,31 @@ document.getElementById('btn-fab-spark').onclick = async () => {
   document.getElementById('spark-body').value = '';
   document.getElementById('spark-new-folder-input').style.display = 'none';
   
-  closeModals();
-  document.getElementById('nq-overlay').classList.add('active');
-  document.getElementById('modal-spark').classList.add('visible');
+  openModal('modal-spark');
   setTimeout(() => document.getElementById('spark-body').focus(), 100);
 };
 
-document.getElementById('spark-folder').onchange = (e) => {
+const sparkFolder = document.getElementById('spark-folder');
+if(sparkFolder) sparkFolder.onchange = (e) => {
   document.getElementById('spark-new-folder-input').style.display = (e.target.value === '__new__') ? 'block' : 'none';
 };
 
-document.getElementById('spark-title').oninput = () => document.getElementById('spark-title').dataset.edited = 'true';
-document.getElementById('spark-body').oninput = (e) => {
-  const titleEl = document.getElementById('spark-title');
-  if (titleEl.dataset.edited === 'true') return;
+const sparkTitle = document.getElementById('spark-title');
+if(sparkTitle) sparkTitle.oninput = () => sparkTitle.dataset.edited = 'true';
+
+const sparkBody = document.getElementById('spark-body');
+if(sparkBody) sparkBody.oninput = (e) => {
+  if (sparkTitle.dataset.edited === 'true') return;
   const words = (e.target.value || '').split(/\s+/).filter(Boolean).slice(0, 4).join(' ');
-  titleEl.value = words;
+  sparkTitle.value = words;
 };
 
-document.getElementById('btn-confirm-spark').onclick = async () => {
-  const text = document.getElementById('spark-body').value.trim();
+const btnConfirmSpark = document.getElementById('btn-confirm-spark');
+if(btnConfirmSpark) btnConfirmSpark.onclick = async () => {
+  const text = sparkBody.value.trim();
   if (!text) return showToast("Spark is empty");
   
-  let targetFolder = document.getElementById('spark-folder').value || currentFolderId;
+  let targetFolder = sparkFolder.value || currentFolderId;
   if (targetFolder === '__new__') {
     const fName = document.getElementById('spark-new-folder-input').value.trim();
     if (!fName) return showToast("Name the new folder");
@@ -384,7 +452,7 @@ document.getElementById('btn-confirm-spark').onclick = async () => {
 
   await dbCall('discourses', 'put', {
     id: 's_' + Date.now(),
-    title: document.getElementById('spark-title').value || "Quick Spark",
+    title: sparkTitle.value || "Quick Spark",
     raw_text: text,
     folder_id: targetFolder,
     item_type: 'spark',
@@ -392,18 +460,10 @@ document.getElementById('btn-confirm-spark').onclick = async () => {
     updated_at: Date.now()
   });
 
-  closeModals(); renderSoup(); showToast("Spark Captured ⚡"); haptic('heavy');
+  closeModals(); refresh(); showToast("Spark Captured ⚡"); haptic('heavy');
 };
 
 /* --- 11. LIGHTHOUSE EDITOR & MATH FORMATTING --- */
-document.getElementById('btn-fab-frag').onclick = () => {
-  currentDiscourseId = 'd_' + Date.now();
-  document.getElementById('lh-title').value = '';
-  document.getElementById('lh-text').value = '';
-  document.getElementById('lh-overlay').classList.add('active');
-  setLhMode('write'); closeModals();
-};
-
 async function openLighthouse(id) {
   currentDiscourseId = id;
   const d = await dbCall('discourses', 'get', id);
@@ -429,9 +489,11 @@ function setLhMode(mode) {
   }
 }
 
-document.getElementById('btn-lh-write').onclick = () => setLhMode('write');
-document.getElementById('btn-lh-view').onclick = () => setLhMode('view');
-document.getElementById('btn-lh-back').onclick = async () => {
+const btnLhWrite = document.getElementById('btn-lh-write'); if(btnLhWrite) btnLhWrite.onclick = () => setLhMode('write');
+const btnLhView = document.getElementById('btn-lh-view'); if(btnLhView) btnLhView.onclick = () => setLhMode('view');
+
+const btnLhBack = document.getElementById('btn-lh-back');
+if(btnLhBack) btnLhBack.onclick = async () => {
   if (currentDiscourseId) {
     const d = await dbCall('discourses', 'get', currentDiscourseId) || {};
     await dbCall('discourses', 'put', {
@@ -440,12 +502,12 @@ document.getElementById('btn-lh-back').onclick = async () => {
       title: document.getElementById('lh-title').value.trim() || 'Untitled',
       raw_text: document.getElementById('lh-text').value,
       folder_id: d.folder_id || currentFolderId,
-      item_type: d.item_type || 'fragment',
+      item_type: d.item_type || (currentDiscourseId.startsWith('s_') ? 'spark' : 'fragment'),
       updated_at: Date.now()
     });
   }
   document.getElementById('lh-overlay').classList.remove('active');
-  renderSoup();
+  refresh();
 };
 
 /* The Precise Cursor Math */
@@ -497,34 +559,9 @@ function renderMarkdown(raw) {
             .replace(/\n/g, '<br>');
 }
 
-/* --- XII. MODAL LOGIC & SEARCH --- */
-function closeModals() {
-  document.getElementById('nq-overlay').classList.remove('active');
-  document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
-  document.getElementById('fab-main').classList.remove('open');
-  document.getElementById('fab-menu').classList.remove('open');
-}
-
-const openModal = (id) => {
-  closeModals();
-  document.getElementById('nq-overlay').classList.add('active');
-  document.getElementById(id).classList.add('visible');
-};
-
-document.getElementById('fab-main').onclick = () => {
-  document.getElementById('fab-main').classList.toggle('open');
-  document.getElementById('fab-menu').classList.toggle('open');
-};
-document.getElementById('btn-fab-folder').onclick = () => { openModal('modal-folder'); document.getElementById('input-folder-name').focus(); };
-document.getElementById('btn-confirm-folder').onclick = async () => {
-  const name = document.getElementById('input-folder-name').value.trim();
-  if (!name) return;
-  await dbCall('folders', 'put', { id: 'f_' + Date.now(), name, parent_id: currentFolderId, created_at: Date.now() });
-  document.getElementById('input-folder-name').value = '';
-  closeModals(); renderSoup();
-};
-
-document.getElementById('input-search').oninput = async (e) => {
+/* --- 12. SEARCH LOGIC --- */
+const inputSearch = document.getElementById('input-search');
+if(inputSearch) inputSearch.oninput = async (e) => {
   const q = e.target.value.toLowerCase();
   const results = document.getElementById('search-results');
   if (!q) { results.innerHTML = ''; return; }
@@ -537,7 +574,7 @@ document.getElementById('input-search').oninput = async (e) => {
   ].join('');
 };
 
-/* --- XIII. AKASHIC SYNC --- */
+/* --- 13. AKASHIC SYNC --- */
 async function syncAkashic() {
   showToast("Akashic Sync Initiated...");
   try {
@@ -557,11 +594,12 @@ async function syncAkashic() {
   }
 }
 
-/* --- XIV. BOOT SEQUENCE --- */
+/* --- 14. BOOT SEQUENCE --- */
 window.onload = () => {
-  initDB().then(() => {
+  initDB().then((database) => {
+    if(!database) { console.error("DB Failed to Mount"); return; }
     updateHeaderActions();
     switchView('view-soup');
-    renderSoup();
+    refresh();
   });
 };
