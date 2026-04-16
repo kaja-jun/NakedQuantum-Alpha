@@ -8,301 +8,10 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>NakedQuantum Beta</title>
-<style>
-:root {
-  --bg: #000000;
-  --surface: #0a0a0a;
-  --surface2: #111111;
-  --border: #1f1f1f;
-  --accent: #c8a050;
-  --accent-dim: #8a6e35;
-  --text: #ccc5b9;
-  --muted: #6b6560;
-  --danger: #8a3030;
-  --font-serif: Georgia, serif;
-}
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+<!-- Link to your new CSS file -->
+<link rel="stylesheet" href="style.css">
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100dvh;
-  overflow: hidden;
-}
-
-/* --- FIREFLY BACKGROUND --- */
-#firefly-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* --- HEADER --- */
-.nq-header {
-  height: 56px;
-  background: #000;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  z-index: 1000;
-  flex-shrink: 0;
-}
-
-.nq-wordmark {
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: var(--accent);
-  font-weight: 900;
-  text-transform: uppercase;
-  opacity: 0.8;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  padding: 8px 0;
-  transition: opacity 0.15s;
-}
-.nq-wordmark.pressing { opacity: 0.4; }
-
-.header-actions { display: flex; align-items: center; gap: 8px; }
-.hdr-btn {
-  width: 36px;
-  height: 36px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
-  font-size: 16px;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  flex-shrink: 0;
-}
-.hdr-btn:active { background: var(--surface2); border-color: var(--accent-dim); }
-
-/* --- VIEW SYSTEM --- */
-.view-host {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.view-panel {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
-  will-change: transform, opacity;
-  background: transparent;
-}
-.view-panel.hidden {
-  transform: translateX(50px);
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* --- THE SOUP (GRID) --- */
-.soup-view {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.soup-surface {
-  padding: 0 16px 100px;
-}
-.section-label {
-  font-size: 9px;
-  letter-spacing: 3px;
-  color: var(--accent);
-  opacity: 0.45;
-  font-weight: 900;
-  text-transform: uppercase;
-  padding: 14px 0 8px;
-}
-.cards-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-/* Fix iOS selection on long-press */
-.folder-card, .fragment-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-  position: relative;
-  overflow: hidden;
-  user-select: none; 
-  -webkit-user-select: none;
-  -webkit-touch-callout: none; 
-}
-.folder-card:active, .fragment-card:active { border-color: var(--accent); background: var(--surface2); }
-.card-name { font-size: 13px; font-weight: 700; color: var(--text); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-serif); }
-.card-meta { font-size: 10px; color: var(--muted); margin-top: 3px; }
-.card-icon { font-size: 14px; color: var(--accent); opacity: 0.6; }
-
-/* BREADCRUMBS */
-.breadcrumbs {
-  padding: 14px 16px 8px;
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-.breadcrumb-item { cursor: pointer; font-weight: 700; }
-.breadcrumb-item:active { color: var(--accent); }
-.breadcrumb-current { color: var(--accent); opacity: 0.9; font-weight: 700; }
-.breadcrumb-arrow { opacity: 0.5; font-size: 10px; }
-
-/* --- LIGHTHOUSE EDITOR --- */
-.lighthouse-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--bg);
-  z-index: 2000;
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-}
-.lighthouse-overlay.active { display: flex; }
-.lh-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: #000;
-}
-.btn-back {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 11px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  font-weight: bold;
-}
-.lh-tools { display: flex; gap: 8px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
-.lh-toggle-btn {
-  background: none; border: none; color: var(--muted); font-size: 11px; padding: 6px 12px; font-weight: bold;
-}
-.lh-toggle-btn.active { background: var(--surface2); color: var(--text); }
-
-.lh-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.lh-inner { max-width: 680px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-.lh-title {
-  width: 100%; background: none; border: none; border-bottom: 1px solid var(--border);
-  color: var(--text); font-size: 22px; font-weight: 700; padding: 6px 0 12px; outline: none; font-family: var(--font-serif);
-}
-
-.format-toolbar {
-  display: flex; align-items: center; gap: 4px; padding: 8px 4px; overflow-x: auto; scrollbar-width: none;
-  border-bottom: 1px solid var(--border); margin-bottom: 12px;
-}
-.format-toolbar::-webkit-scrollbar { display: none; }
-.fmt-btn {
-  background: none; border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700;
-  padding: 5px 10px; border-radius: 7px; white-space: nowrap; font-family: var(--font-serif);
-}
-.fmt-btn:active { background: var(--surface2); color: var(--accent); }
-.fmt-divider { width: 1px; height: 20px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
-
-.content-textarea {
-  width: 100%; min-height: 320px; background: none; color: var(--text); border: none;
-  font-size: 16px; line-height: 1.8; outline: none; resize: none; font-family: var(--font-serif);
-}
-.content-view {
-  display: none; background: none; color: var(--text); font-size: 16px; line-height: 1.8; font-family: var(--font-serif); min-height: 200px;
-}
-.content-view h1, .content-view h2, .content-view h3 { color: var(--accent); margin-bottom: 8px; }
-.content-view p { margin-bottom: 14px; }
-.content-view blockquote { border-left: 2px solid var(--accent-dim); padding-left: 14px; color: var(--muted); font-style: italic; }
-
-/* --- FAB --- */
-.fab-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1500;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
-}
-.fab-main {
-  width: 52px; height: 52px; background: var(--surface2); border: 1px solid var(--accent-dim); border-radius: 26px;
-  display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.fab-main.open { transform: rotate(45deg); background: var(--accent); color: #000; }
-
-.fab-menu {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
-  opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s ease;
-}
-.fab-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
-.fab-item {
-  background: var(--surface); border: 1px solid var(--border); color: var(--text);
-  font-size: 13px; font-weight: bold; padding: 10px 16px; border-radius: 20px; white-space: nowrap; cursor: pointer;
-}
-.fab-item:active { border-color: var(--accent); }
-
-/* --- SANCTUARY VIEW --- */
-.sanctuary-view { display: flex; flex-direction: column; }
-
-/* --- MODALS & TOASTS --- */
-.overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 2500; display: none; opacity: 0; transition: opacity 0.3s;
-}
-.overlay.active { display: block; opacity: 1; }
-.modal {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; width: 90%; max-width: 340px; padding: 24px; z-index: 2600; display: none; flex-direction: column; gap: 12px;
-}
-.modal.visible { display: flex; }
-.modal-title { font-size: 11px; letter-spacing: 3px; color: var(--accent); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
-.modal input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; outline: none; font-size: 15px;}
-.modal-btns { display: flex; gap: 10px; margin-top: 8px; }
-.modal-btn { flex: 1; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; }
-.modal-btn.primary { background: var(--accent); color: #000; }
-.modal-btn.secondary { background: var(--surface2); color: var(--text); }
-.modal-btn.danger { background: var(--bg); border: 1px solid var(--danger); color: #ff6666; }
-
-#nq-toast {
-  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000;
-  padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 900; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none;
-}
-#mode-toast {
-  position: fixed; top: 72px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--accent-dim);
-  color: var(--accent); padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
-  z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none;
-}
-</style>
 </head>
 <body>
 
@@ -321,10 +30,22 @@ body {
     <div id="soup-content" class="soup-surface"></div>
   </div>
 
+  <!-- THE VOID (Soft Delete) -->
+  <div class="view-panel soup-view hidden" id="view-void">
+    <div class="void-header">
+      <div class="void-title">◌ The Void</div>
+      <button class="btn-void-purge-all" id="btn-purge-all">Purge All</button>
+    </div>
+    <div style="padding:0 16px;">
+      <button class="modal-btn secondary" id="btn-close-void" style="width:100%; margin-bottom:16px;">← Return to Soup</button>
+    </div>
+    <div class="soup-surface" id="void-surface" style="padding-top:0;"></div>
+  </div>
+
   <!-- THE SANCTUARY (Phase 2 placeholder) -->
   <div class="view-panel sanctuary-view hidden" id="view-sanctuary">
-    <div style="padding:40px; text-align:center; opacity:0.5;">
-      <h1 style="color:var(--accent); font-family:var(--font-serif); font-weight:normal;">The Sanctuary</h1>
+    <div class="placeholder-center">
+      <h1>The Sanctuary</h1>
       <p>The encounter space.<br>Container logic arriving in Phase 2.</p>
     </div>
   </div>
@@ -333,6 +54,7 @@ body {
 <!-- FAB -->
 <div class="fab-container" id="fab-container">
   <div class="fab-menu" id="fab-menu">
+    <div class="fab-item" id="btn-fab-spark" style="color:#a0d8a0;">⚡ New Spark</div>
     <div class="fab-item" id="btn-fab-folder">◈ New Folder</div>
     <div class="fab-item" id="btn-fab-frag" style="color:var(--text);">✦ New Fragment</div>
   </div>
@@ -350,7 +72,7 @@ body {
   </div>
   <div class="lh-scroll">
     <div class="lh-inner">
-      <input class="lh-title" id="lh-title" placeholder="Untitled Fragment">
+      <input class="lh-title" id="lh-title" placeholder="Untitled Fragment" spellcheck="false">
       
       <!-- Formatting Toolbar -->
       <div class="format-toolbar">
@@ -367,6 +89,9 @@ body {
         <div class="fmt-divider"></div>
         <button class="fmt-btn" data-wrap="> ">"</button>
         <button class="fmt-btn" data-wrap="`">`c`</button>
+        <button class="fmt-btn" data-block="```\n" data-end="\n```">```</button>
+        <div class="fmt-divider"></div>
+        <button class="fmt-btn" data-insert="\n---\n">—</button>
       </div>
 
       <textarea class="content-textarea" id="lh-text" placeholder="Strike into the void..."></textarea>
@@ -376,7 +101,20 @@ body {
 </div>
 
 <!-- MODALS -->
-<div class="overlay" id="nq-overlay" onclick="closeModals()"></div>
+<div class="overlay" id="nq-overlay"></div>
+
+<!-- Spark Capture Modal -->
+<div class="modal" id="modal-spark">
+  <div class="modal-title" style="color:#a0d8a0;">⚡ Quick Spark</div>
+  <input type="text" id="spark-title" placeholder="Title..." maxlength="120">
+  <textarea id="spark-body" placeholder="Fleeting thought..." style="min-height:120px; resize:none;"></textarea>
+  <select id="spark-folder"></select>
+  <input type="text" id="spark-new-folder-input" placeholder="New folder name..." style="display:none;">
+  <div class="modal-btns">
+    <button class="modal-btn secondary" onclick="closeModals()">Cancel</button>
+    <button class="modal-btn primary" id="btn-confirm-spark" style="background:#a0d8a0;">Capture</button>
+  </div>
+</div>
 
 <!-- Folder Modal -->
 <div class="modal" id="modal-folder">
@@ -393,7 +131,8 @@ body {
   <div class="modal-title">Manage</div>
   <div style="display:flex; flex-direction:column; gap:10px;">
     <button class="modal-btn secondary" id="btn-mgmt-rename">✎ Rename</button>
-    <button class="modal-btn danger" id="btn-mgmt-delete">✕ Delete</button>
+    <button class="modal-btn secondary" id="btn-mgmt-move">▤ Move</button>
+    <button class="modal-btn danger" id="btn-mgmt-delete">✕ Void (Soft Delete)</button>
   </div>
 </div>
 
@@ -407,325 +146,31 @@ body {
   </div>
 </div>
 
+<!-- Move Modal -->
+<div class="modal" id="modal-move">
+  <div class="modal-title">Move to Folder</div>
+  <select id="move-parent-select"><option value="">Root</option></select>
+  <div class="modal-btns">
+    <button class="modal-btn secondary" onclick="closeModals()">Cancel</button>
+    <button class="modal-btn primary" id="btn-confirm-move">Move</button>
+  </div>
+</div>
+
+<!-- Search Modal -->
+<div class="modal" id="modal-search">
+  <div class="modal-title">Search All</div>
+  <input type="text" id="input-search" placeholder="Search the archive...">
+  <div class="global-search-results" id="search-results"></div>
+  <div class="modal-btns">
+    <button class="modal-btn secondary" onclick="closeModals()">Close</button>
+  </div>
+</div>
+
 <div id="nq-toast"></div>
 <div id="mode-toast"></div>
 
-<script>
-/* --- STATE & FIREFLY --- */
-let db = null;
-let currentMode = 'soup';
-let currentFolderId = null;
-let currentDiscourseId = null;
-let mgmtId = null;
-let longPressTimer = null;
-let breadcrumbPath = [{ id: null, name: '◈ Root' }];
+<!-- Link to your new JavaScript file -->
+<script src="app.js"></script>
 
-class FireflyManager {
-  constructor() {
-    this.canvas = document.getElementById('firefly-canvas');
-    this.ctx = this.canvas.getContext('2d');
-    this.particles = [];
-    this.density = 20;
-    this.resize();
-    window.addEventListener('resize', () => this.resize());
-    this.animate();
-  }
-  resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
-  setDensity(len) { this.density = Math.min(200, 15 + Math.floor(len / 50)); }
-  animate() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    while (this.particles.length < this.density) {
-      this.particles.push({
-        x: Math.random() * this.canvas.width, y: Math.random() * this.canvas.height,
-        size: Math.random() * 2 + 0.5, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-        alpha: Math.random() * 0.5 + 0.2, pulse: Math.random() * 0.02 + 0.005
-      });
-    }
-    if (this.particles.length > this.density) this.particles.splice(this.density);
-    this.particles.forEach(p => {
-      p.x += p.vx; p.y += p.vy; p.alpha += p.pulse;
-      if (p.alpha > 0.7 || p.alpha < 0.1) p.pulse *= -1;
-      if (p.x < 0) p.x = this.canvas.width; if (p.x > this.canvas.width) p.x = 0;
-      if (p.y < 0) p.y = this.canvas.height; if (p.y > this.canvas.height) p.y = 0;
-      this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      this.ctx.fillStyle = `rgba(200, 160, 80, ${p.alpha})`; this.ctx.fill();
-    });
-    requestAnimationFrame(() => this.animate());
-  }
-}
-const fireflyManager = new FireflyManager();
-
-/* --- DB CORE --- */
-async function initDB() {
-  return new Promise((resolve) => {
-    const req = indexedDB.open("NakedQuantumDB", 3);
-    req.onupgradeneeded = (e) => {
-      const d = e.target.result;
-      const stores = ["folders", "discourses", "characters", "history"];
-      stores.forEach(s => {
-        if (!d.objectStoreNames.contains(s)) {
-          const os = d.createObjectStore(s, { keyPath: "id", autoIncrement: (s === 'history') });
-          if (s === 'discourses') os.createIndex("folder_id", "folder_id");
-        }
-      });
-    };
-    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
-  });
-}
-const dbCall = (store, method, ...args) => new Promise(r => {
-  const tx = db.transaction(store, "readwrite");
-  const req = tx.objectStore(store)[method](...args);
-  req.onsuccess = () => r(req.result);
-  req.onerror = () => r(null);
-});
-
-/* --- UI HELPERS --- */
-const showToast = (msg) => {
-  const t = document.getElementById('nq-toast');
-  t.textContent = msg; t.style.opacity = "1";
-  setTimeout(() => t.style.opacity = "0", 2000);
-};
-const showModeToast = (msg) => {
-  const t = document.getElementById('mode-toast');
-  t.textContent = msg; t.style.opacity = "1";
-  setTimeout(() => t.style.opacity = "0", 1500);
-};
-const closeModals = () => {
-  document.getElementById('nq-overlay').classList.remove('active');
-  document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
-  document.getElementById('fab-main').classList.remove('open');
-  document.getElementById('fab-menu').classList.remove('open');
-};
-const openModal = (id) => {
-  closeModals();
-  document.getElementById('nq-overlay').classList.add('active');
-  document.getElementById(id).classList.add('visible');
-};
-
-/* --- MODE SWITCHING --- */
-const wordmark = document.getElementById('nq-wordmark');
-let pressTimer = null;
-wordmark.addEventListener('touchstart', () => {
-  wordmark.classList.add('pressing');
-  pressTimer = setTimeout(() => {
-    wordmark.classList.remove('pressing');
-    const next = currentMode === 'soup' ? 'sanctuary' : 'soup';
-    switchMode(next);
-    showModeToast(next === 'soup' ? '✦ The Soup' : '◈ The Sanctuary');
-    if (navigator.vibrate) navigator.vibrate(40);
-  }, 600);
-}, { passive: true });
-wordmark.addEventListener('touchend', () => { wordmark.classList.remove('pressing'); clearTimeout(pressTimer); });
-
-function switchMode(mode) {
-  currentMode = mode;
-  document.getElementById('view-soup').classList.toggle('hidden', mode !== 'soup');
-  document.getElementById('view-sanctuary').classList.toggle('hidden', mode !== 'sanctuary');
-  
-  // Hide FAB in Sanctuary
-  document.getElementById('fab-container').style.display = (mode === 'soup') ? 'flex' : 'none';
-  
-  const hdrActions = document.getElementById('header-actions');
-  if (mode === 'soup') {
-    hdrActions.innerHTML = `<button class="hdr-btn" title="Global Sync">∞</button>`;
-    renderSoup();
-  } else {
-    hdrActions.innerHTML = `<button class="hdr-btn" title="Lens Settings">⚙</button>`;
-  }
-}
-
-/* --- FAB LOGIC --- */
-document.getElementById('fab-main').onclick = () => {
-  document.getElementById('fab-main').classList.toggle('open');
-  document.getElementById('fab-menu').classList.toggle('open');
-};
-document.getElementById('btn-fab-folder').onclick = () => { openModal('modal-folder'); document.getElementById('input-folder-name').focus(); };
-document.getElementById('btn-fab-frag').onclick = () => { createNewDiscourse(); };
-
-/* --- THE SOUP & GRID LOGIC --- */
-async function renderSoup() {
-  const container = document.getElementById('soup-content');
-  const breadcrumbs = document.getElementById('soup-breadcrumbs');
-  
-  // Breadcrumbs
-  breadcrumbs.innerHTML = '';
-  breadcrumbPath.forEach((seg, idx) => {
-    const btn = document.createElement('span');
-    btn.className = idx === breadcrumbPath.length - 1 ? 'breadcrumb-current' : 'breadcrumb-item';
-    btn.textContent = seg.name;
-    btn.onclick = () => {
-      breadcrumbPath = breadcrumbPath.slice(0, idx + 1);
-      currentFolderId = breadcrumbPath[breadcrumbPath.length - 1].id;
-      renderSoup();
-    };
-    breadcrumbs.appendChild(btn);
-    if (idx < breadcrumbPath.length - 1) {
-      const arrow = document.createElement('span');
-      arrow.className = 'breadcrumb-arrow';
-      arrow.textContent = '▸';
-      breadcrumbs.appendChild(arrow);
-    }
-  });
-
-  const folders = (await dbCall('folders', 'getAll')).filter(f => f.parent_id === currentFolderId);
-  const discourses = (await dbCall('discourses', 'getAll')).filter(d => d.folder_id === currentFolderId);
-
-  container.innerHTML = '';
-  let totalLen = 0;
-
-  if (folders.length > 0) {
-    container.innerHTML += `<div class="section-label">Folders</div><div class="cards-grid" id="folder-grid"></div>`;
-    const grid = document.getElementById('folder-grid');
-    folders.forEach(f => {
-      const card = document.createElement('div');
-      card.className = 'folder-card';
-      card.innerHTML = `<div class="card-icon">◈</div><div class="card-name">${f.name}</div>`;
-      card.onclick = () => { breadcrumbPath.push({ id: f.id, name: f.name }); currentFolderId = f.id; renderSoup(); };
-      card.oncontextmenu = (e) => { e.preventDefault(); return false; };
-      card.onmousedown = () => startLongPress(f.id, 'folder');
-      card.ontouchstart = () => startLongPress(f.id, 'folder');
-      grid.appendChild(card);
-    });
-  }
-
-  if (discourses.length > 0) {
-    container.innerHTML += `<div class="section-label">Fragments</div><div class="cards-grid" id="disc-grid"></div>`;
-    const grid = document.getElementById('disc-grid');
-    discourses.forEach(d => {
-      totalLen += (d.raw_text || "").length;
-      const card = document.createElement('div');
-      card.className = 'fragment-card';
-      card.innerHTML = `<div class="card-icon">✦</div><div class="card-name">${d.title || 'Untitled'}</div><div class="card-meta">${new Date(d.updated_at).toLocaleDateString()}</div>`;
-      card.onclick = () => openLighthouse(d.id);
-      card.oncontextmenu = (e) => { e.preventDefault(); return false; };
-      card.onmousedown = () => startLongPress(d.id, 'discourse');
-      card.ontouchstart = () => startLongPress(d.id, 'discourse');
-      grid.appendChild(card);
-    });
-  }
-
-  if (!folders.length && !discourses.length) {
-    container.innerHTML = `<div class="placeholder-center"><h1>The Soup is Clear</h1><p>No fragments found in this depth.</p></div>`;
-  }
-  fireflyManager.setDensity(totalLen);
-}
-
-/* --- LONG PRESS MGMT --- */
-function startLongPress(id, type) {
-  longPressTimer = setTimeout(() => {
-    mgmtId = id;
-    if (navigator.vibrate) navigator.vibrate(20);
-    openModal('modal-mgmt');
-  }, 600); // 600ms long press
-}
-window.onmouseup = window.ontouchend = window.ontouchmove = () => clearTimeout(longPressTimer);
-
-document.getElementById('btn-mgmt-rename').onclick = () => {
-  openModal('modal-rename');
-  document.getElementById('input-rename').focus();
-};
-document.getElementById('btn-mgmt-delete').onclick = async () => {
-  if(!confirm("Purge to the Void?")) return;
-  const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
-  await dbCall(store, 'delete', mgmtId);
-  closeModals(); renderSoup(); showToast("Purged.");
-};
-
-/* --- MODAL CONFIRMS --- */
-document.getElementById('btn-confirm-folder').onclick = async () => {
-  const name = document.getElementById('input-folder-name').value.trim();
-  if (!name) return;
-  await dbCall('folders', 'put', { id: 'f_' + Date.now(), name, parent_id: currentFolderId, created_at: Date.now() });
-  document.getElementById('input-folder-name').value = '';
-  closeModals(); renderSoup();
-};
-
-document.getElementById('btn-confirm-rename').onclick = async () => {
-  const newName = document.getElementById('input-rename').value.trim();
-  if (!newName) return;
-  const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
-  const item = await dbCall(store, 'get', mgmtId);
-  if (store === 'folders') item.name = newName; else item.title = newName;
-  await dbCall(store, 'put', item);
-  document.getElementById('input-rename').value = '';
-  closeModals(); renderSoup();
-};
-
-/* --- LIGHTHOUSE EDITOR --- */
-async function createNewDiscourse() {
-  const id = 'd_' + Date.now();
-  currentDiscourseId = id;
-  document.getElementById('lh-title').value = '';
-  document.getElementById('lh-text').value = '';
-  document.getElementById('lh-overlay').classList.add('active');
-  setLhMode('write'); closeModals();
-}
-
-async function openLighthouse(id) {
-  currentDiscourseId = id;
-  const d = await dbCall('discourses', 'get', id);
-  document.getElementById('lh-title').value = d.title || '';
-  document.getElementById('lh-text').value = d.raw_text || '';
-  document.getElementById('lh-overlay').classList.add('active');
-  setLhMode('write');
-}
-
-function setLhMode(mode) {
-  const ta = document.getElementById('lh-text');
-  const view = document.getElementById('lh-view');
-  const btnW = document.getElementById('btn-lh-write');
-  const btnV = document.getElementById('btn-lh-view');
-  if (mode === 'write') {
-    ta.style.display = 'block'; view.style.display = 'none';
-    btnW.classList.add('active'); btnV.classList.remove('active');
-  } else {
-    view.innerHTML = renderMarkdown(ta.value);
-    ta.style.display = 'none'; view.style.display = 'block';
-    btnW.classList.remove('active'); btnV.classList.add('active');
-  }
-}
-document.getElementById('btn-lh-write').onclick = () => setLhMode('write');
-document.getElementById('btn-lh-view').onclick = () => setLhMode('view');
-
-document.getElementById('btn-lh-back').onclick = async () => {
-  if (currentDiscourseId) {
-    const title = document.getElementById('lh-title').value.trim() || 'Untitled';
-    const text = document.getElementById('lh-text').value;
-    await dbCall('discourses', 'put', { id: currentDiscourseId, title, raw_text: text, folder_id: currentFolderId, updated_at: Date.now() });
-  }
-  document.getElementById('lh-overlay').classList.remove('active');
-  renderSoup(); // INSTANT REFRESH
-};
-
-/* Formatting Toolbar Logic */
-document.querySelectorAll('.fmt-btn').forEach(btn => {
-  btn.onclick = () => {
-    const ta = document.getElementById('lh-text');
-    const start = ta.selectionStart, end = ta.selectionEnd;
-    const val = ta.value, selected = val.slice(start, end);
-    let res = '';
-    if (btn.dataset.wrap) res = btn.dataset.wrap + selected + btn.dataset.wrap;
-    else if (btn.dataset.line) res = btn.dataset.line + selected;
-    else if (btn.dataset.insert) res = btn.dataset.insert;
-    ta.value = val.slice(0, start) + res + val.slice(end);
-    ta.focus(); ta.setSelectionRange(start + res.length, start + res.length);
-  };
-});
-
-function renderMarkdown(raw) {
-  if (!raw) return '<span style="opacity:0.5;font-style:italic;">Silence.</span>';
-  return raw.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-            .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-            .replace(/\n/g, '<br>');
-}
-
-/* --- INIT --- */
-initDB().then(() => {
-  switchMode('soup');
-});
-</script>
 </body>
 </html>
