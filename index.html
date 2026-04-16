@@ -213,6 +213,34 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 @media (max-width: 480px) { .lighthouse-tools { gap: 4px; } .tbtn { padding: 7px 8px; font-size: 10px; } .view-toggle-btn { padding: 6px 9px; } .cards-grid { gap: 8px; } .lighthouse-scroll { padding: 20px 14px 60px; } }
+/* ENTRANCE VIEW STYLES */
+.entrance-question {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.4;
+  max-width: 620px;
+  color: var(--text);
+  margin-bottom: 40px;
+  min-height: 132px;
+}
+.entrance-answer {
+  width: 100%;
+  max-width: 620px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 18px;
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 1.7;
+  resize: none;
+  min-height: 180px;
+  font-family: var(--font-serif);
+  margin-bottom: 24px;
+}
+.entrance-answer:focus {
+  border-color: var(--accent-dim);
+}
 </style>
 </head>
 <body>
@@ -225,6 +253,25 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 <div id="mode-toast"></div>
 
 <div class="view-host">
+    <!-- ENTRANCE VIEW - first screen (added) -->
+  <div class="view-panel entrance-view" id="view-entrance" style="display:none; background:var(--bg); align-items:center; justify-content:center; padding:40px 24px; text-align:center;">
+    <div class="nq-wordmark" style="font-size:14px; margin-bottom:60px; opacity:0.6; letter-spacing:4px;">NAKEDQUANTUM</div>
+    
+    <div id="entrance-question" class="entrance-question" style="font-family:var(--font-serif); font-size:22px; line-height:1.4; max-width:620px; color:var(--text); margin-bottom:40px; min-height:132px;">
+      Are you staring at existence right now, or is existence staring back through you?
+    </div>
+    
+    <textarea id="entrance-answer" class="entrance-answer" style="width:100%; max-width:620px; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:18px; border-radius:12px; font-size:16px; line-height:1.7; resize:none; min-height:180px; font-family:var(--font-serif); margin-bottom:24px;" placeholder="Write whatever arises... no performance, no filter"></textarea>
+    
+    <div style="display:flex; gap:12px; width:100%; max-width:620px;">
+      <button id="btn-submit-answer" style="flex:1; padding:16px; border-radius:12px; font-weight:900; font-size:14px; background:var(--accent); color:#000;">Submit Reflection</button>
+      <button id="btn-cant-answer" style="flex:1; padding:16px; border-radius:12px; font-weight:900; font-size:14px; background:transparent; border:1px solid var(--accent-dim); color:var(--accent);">I can’t answer</button>
+    </div>
+    
+    <button id="btn-summon-question" style="margin-top:16px; width:100%; max-width:620px; padding:16px; border-radius:12px; font-weight:900; font-size:14px; background:var(--surface2); color:var(--accent); border:1px solid var(--accent-dim);">Summon deeper question</button>
+    
+    <button id="btn-enter-abyss" style="margin-top:60px; width:100%; max-width:620px; padding:16px; border-radius:12px; font-weight:900; font-size:14px; background:#111; color:var(--accent); border:1px solid var(--accent);">Enter the Abyss</button>
+  </div>
   <div class="view-panel soup-view" id="view-soup">
     <div class="breadcrumb-bar" id="breadcrumb-bar"></div>
     <div class="table-action-bar">
@@ -869,6 +916,96 @@ document.addEventListener('DOMContentLoaded',()=>{
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 
 window.cosmOSPinDisc=async function({title,raw_text,source_link,backlink}){const disc=await createDiscourse({title,raw_text,source_link:JSON.stringify(source_link)});if(backlink){const blId="bl_"+Date.now();await dbPut("cosm_backlinks",{id:blId,discourse_id:disc.id,...backlink,created_at:Date.now()});}return disc.id;};
+/* ==================== ENTRANCE LOGIC (new) ==================== */
+const coreQuestions = [
+  "Are you staring at existence right now, or is existence staring back through you?",
+  "What part of you is still pretending this moment is ordinary?",
+  "If there is no final truth, what are you quietly holding onto anyway?",
+  "Where does the lie live in the story you tell yourself today?",
+  "Can you feel the weight of your own consciousness without giving it a name?",
+  "What would remain if every narrative you carry suddenly dissolved?",
+  "Are you willing to sit here with the discomfort of not knowing?",
+  "What is this fleeting awareness actually made of?",
+  "Which mask are you still wearing even in this private space?",
+  "If the universe has no center, why does your pain feel like one?",
+  "What question are you afraid to ask yourself right now?",
+  "Can you bear the silence without filling it?"
+];
+
+let currentQuestionText = "";
+
+async function loadEntrance() {
+  if (localStorage.getItem('nq_entrance_seen') === 'true') return;
+  
+  const entrance = document.getElementById('view-entrance');
+  entrance.style.display = 'flex';
+  showRandomQuestion();
+}
+
+function showRandomQuestion() {
+  currentQuestionText = coreQuestions[Math.floor(Math.random() * coreQuestions.length)];
+  document.getElementById('entrance-question').textContent = currentQuestionText;
+  document.getElementById('entrance-answer').value = '';
+}
+
+async function saveReflection(answer) {
+  const now = Date.now();
+  await dbPut('cosm_reflections', {
+    id: 'ref_' + now,
+    question: currentQuestionText,
+    answer: answer || "(I couldn’t answer)",
+    timestamp: now
+  });
+  showToast(answer ? "Reflection anchored" : "Noted — you couldn’t answer");
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // ... your existing DOMContentLoaded code stays exactly as it is ...
+
+  // NEW entrance listeners
+  document.getElementById('btn-submit-answer').addEventListener('click', () => {
+    const text = document.getElementById('entrance-answer').value.trim();
+    saveReflection(text);
+    showRandomQuestion();
+  });
+
+  document.getElementById('btn-cant-answer').addEventListener('click', () => {
+    saveReflection('');
+    showRandomQuestion();
+  });
+
+  document.getElementById('btn-summon-question').addEventListener('click', async () => {
+    const key = localStorage.getItem('nexus_v7_key') || localStorage.getItem('nq_api_key');
+    if (!key) { showRandomQuestion(); return; }
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: localStorage.getItem("activeModel_v1") || "google/gemini-2.0-flash-001",
+          max_tokens: 120,
+          messages: [{ role: "system", content: "Generate ONE raw, uncomfortable, accurate question about existence. No wellness, no cold physics, no clichés. Return ONLY the question." }]
+        })
+      });
+      const data = await res.json();
+      const q = data.choices?.[0]?.message?.content?.trim();
+      if (q) {
+        currentQuestionText = q;
+        document.getElementById('entrance-question').textContent = q;
+        document.getElementById('entrance-answer').value = '';
+      }
+    } catch(e) { showRandomQuestion(); }
+  });
+
+  document.getElementById('btn-enter-abyss').addEventListener('click', () => {
+    localStorage.setItem('nq_entrance_seen', 'true');
+    document.getElementById('view-entrance').style.display = 'none';
+    document.getElementById('view-soup').classList.remove('hidden');
+  });
+
+  // Auto-start entrance on first launch
+  loadEntrance();
+});
 </script>
 </body>
 </html>
