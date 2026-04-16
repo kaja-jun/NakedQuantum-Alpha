@@ -36,6 +36,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .hdr-btn { width: 36px; height: 36px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 16px; cursor: pointer; flex-shrink: 0; }
 .hdr-btn:active { background: var(--surface2); border-color: var(--accent-dim); }
+.hdr-btn.gold { color: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px rgba(200,160,80,0.3); }
 .hdr-import-label { width: 36px; height: 36px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 16px; cursor: pointer; flex-shrink: 0; }
 
 #mode-toast { position: fixed; top: 66px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--accent-dim); color: var(--accent); padding: 5px 14px; border-radius: 20px; font-size: 9px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
@@ -254,10 +255,24 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.chat-msg.narrator { align-self: center; max-width: 95%; background: none; border: none; color: var(--muted); font-style: italic; text-align: center; }
+.chat-action { color: var(--accent-dim); }
+.chat-speech { color: var(--text); font-weight: 500; }
+@media (max-width: 400px) {
+  .header-actions { gap: 4px; }
+  .hdr-btn { width: 32px; height: 32px; font-size: 14px; }
+  .nq-header { padding: 0 8px; }
+  .nq-wordmark { letter-spacing: 1px; font-size: 10px; }
+}
+
 @media (max-width: 480px) { .lighthouse-tools { gap: 4px; } .tbtn { padding: 7px 8px; font-size: 10px; } .view-toggle-btn { padding: 6px 9px; } .cards-grid { gap: 8px; } .lighthouse-scroll { padding: 20px 14px 60px; } }
 </style>
 </head>
 <body>
+<div id="soul-awakening" style="position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s;">
+  <div style="font-size:12px;letter-spacing:4px;color:#c8a050;font-weight:900;text-transform:uppercase;margin-bottom:20px;animation:pulse 1.5s infinite;">Soul Awakening...</div>
+  <div id="init-error" style="display:none;color:#8a3030;font-size:11px;text-align:center;padding:20px;max-width:80%;"></div>
+</div>
 <canvas id="firefly-canvas"></canvas>
 
 <div class="nq-header">
@@ -269,9 +284,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 <div class="view-host">
   <div class="view-panel soup-view" id="view-soup">
     <div class="breadcrumb-bar" id="breadcrumb-bar"></div>
-    <div class="table-action-bar">
-      <button class="btn-table-action" id="btn-new-discourse">+ New Discourse</button>
-    </div>
+
     <div class="search-bar-wrap" id="search-bar-wrap" style="display:none;">
       <input class="search-input" id="search-input" placeholder="Search discourses...">
     </div>
@@ -297,10 +310,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
           <button class="view-toggle-btn active" id="btn-write">Write</button>
           <button class="view-toggle-btn" id="btn-view">View</button>
         </div>
-        <button class="tbtn" id="btn-export-md">MD ↓</button>
-        <button class="tbtn" id="btn-export-pdf">PDF ↓</button>
-        <button class="tbtn gold" id="btn-extract">◈</button>
-        <button class="tbtn danger" id="btn-delete-discourse">✕</button>
+
       </div>
     </div>
     <div class="lighthouse-scroll">
@@ -337,9 +347,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
   </div>
 
   <div class="view-panel sanctuary-view hidden" id="view-sanctuary">
-    <div class="table-action-bar">
-      <button class="btn-table-action" id="btn-new-character">+ New Character</button>
-    </div>
+
     <div class="search-bar-wrap">
       <input class="search-input" id="search-input-sanctuary" placeholder="Search characters...">
     </div>
@@ -349,82 +357,27 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
   <div class="view-panel forge-view hidden" id="view-forge">
     <div class="forge-scroll">
       <div class="forge-container" id="forge-container">
-        <div class="forge-section open">
-          <div class="forge-section-header">
-            <span class="forge-section-title">Identity & Backstory</span>
-            <span class="forge-chevron">▾</span>
-          </div>
-          <div class="forge-section-content">
-            <div class="forge-input-group">
-              <span class="forge-label">Name</span>
-              <input class="cosm-input" id="forge-name" placeholder="Character Name...">
-            </div>
-            <div class="forge-input-group">
-              <span class="forge-label">Role / Tagline</span>
-              <input class="cosm-input" id="forge-role" placeholder="The Lone Wanderer...">
-            </div>
-            <div class="forge-input-group">
-              <span class="forge-label">Backstory</span>
-              <textarea class="forge-textarea" id="forge-backstory" placeholder="Origins and history..."></textarea>
-            </div>
-          </div>
+        <div class="forge-input-group">
+          <span class="forge-label">Name</span>
+          <input class="cosm-input" id="forge-name" placeholder="Character Name...">
         </div>
-
-        <div class="forge-section">
-          <div class="forge-section-header">
-            <span class="forge-section-title">Personality & Core</span>
-            <span class="forge-chevron">▾</span>
-          </div>
-          <div class="forge-section-content">
-            <div class="forge-input-group">
-              <span class="forge-label">Personality</span>
-              <textarea class="forge-textarea" id="forge-personality" placeholder="Traits, quirks, behavior..."></textarea>
-            </div>
-            <div class="forge-input-group">
-              <span class="forge-label">Inclination</span>
-              <textarea class="forge-textarea" id="forge-inclination" placeholder="Motivations and moral compass..."></textarea>
-            </div>
-          </div>
+        <div class="forge-input-group">
+          <span class="forge-label">Role / Tagline</span>
+          <input class="cosm-input" id="forge-role" placeholder="The Lone Wanderer...">
         </div>
-
-        <div class="forge-section">
-          <div class="forge-section-header">
-            <span class="forge-section-title">Lore & World</span>
-            <span class="forge-chevron">▾</span>
-          </div>
-          <div class="forge-section-content">
-            <div class="forge-input-group">
-              <span class="forge-label">Lorebook</span>
-              <textarea class="forge-textarea" id="forge-lorebook" placeholder="World facts relevant to them..."></textarea>
-            </div>
-            <div class="forge-input-group">
-              <span class="forge-label">Scenario</span>
-              <textarea class="forge-textarea" id="forge-scenario" placeholder="Current situation..."></textarea>
-            </div>
-          </div>
+        <div class="forge-input-group">
+          <span class="forge-label">Summary (Personality, Inclination, PC Info)</span>
+          <textarea class="forge-textarea" id="forge-summary" style="min-height: 180px;" placeholder="Traits, behavior, motivations, and player relationship..."></textarea>
         </div>
-
-        <div class="forge-section">
-          <div class="forge-section-header">
-            <span class="forge-section-title">Dynamics & Presence</span>
-            <span class="forge-chevron">▾</span>
-          </div>
-          <div class="forge-section-content">
-            <div class="forge-input-group">
-              <span class="forge-label">Relationship Dynamics</span>
-              <textarea class="forge-textarea" id="forge-relationships" placeholder="How they view others..."></textarea>
-            </div>
-            <div class="forge-input-group">
-              <span class="forge-label">Player Character</span>
-              <textarea class="forge-textarea" id="forge-pc-info" placeholder="Info about the player..."></textarea>
-            </div>
-            <div class="forge-input-group">
-              <span class="forge-label">Quantum Temperature</span>
-              <div class="range-wrap">
-                <input type="range" class="range-input" id="forge-temp" min="0" max="2" step="0.1" value="1">
-                <span class="range-val" id="forge-temp-val">1.0</span>
-              </div>
-            </div>
+        <div class="forge-input-group">
+          <span class="forge-label">Memory (Backstory, Lore, Scenario, Relationships)</span>
+          <textarea class="forge-textarea" id="forge-memory" style="min-height: 250px;" placeholder="History, world facts, current situation, and other dynamics..."></textarea>
+        </div>
+        <div class="forge-input-group">
+          <span class="forge-label">Quantum Temperature</span>
+          <div class="range-wrap">
+            <input type="range" class="range-input" id="forge-temp" min="0" max="2" step="0.1" value="1">
+            <span class="range-val" id="forge-temp-val">1.0</span>
           </div>
         </div>
       </div>
@@ -446,6 +399,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
     </div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-area">
+      <button class="hdr-btn" id="btn-narrator-toggle" title="Toggle Narrator Mode" style="width:40px;height:40px;border-radius:50%;margin-bottom:0;">N</button>
       <textarea class="chat-input" id="chat-input" placeholder="Send a message..." rows="1"></textarea>
       <button class="btn-send" id="btn-send">✦</button>
     </div>
@@ -539,7 +493,7 @@ document.addEventListener('touchstart',()=>{},{passive:true});
 /* STATE */
 let db=null,currentMode='soup',currentDiscourseId=null,currentFolderId=null,
     breadcrumbPath=[{id:null,name:'◈ root'}],editorMode='write',currentView='table',
-    fabOpen=false,mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
+    fabOpen=false,mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='',chatNarratorMode=false;
 const AKASHIC_URL='https://wandering-violet-964a.gazajar.workers.dev';
 
 let cosmUserId=localStorage.getItem('cosm_user_id')||crypto.randomUUID();
@@ -604,7 +558,29 @@ async function deleteMosaicTile(dId){const t=await getMosaicTile(dId);if(t)await
 async function getBacklink(dId){const l=await dbGetByIndex("cosm_backlinks","discourse_id",dId);return l.length>0?l[0]:null;}
 
 /* INIT */
-async function init(){updateHeaderButtons();updateFabMenu(currentMode);await renderTableView();document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';}
+async function init(){
+  try {
+    updateHeaderButtons();
+    updateFabMenu(currentMode);
+    await renderTableView();
+    document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';
+    document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';
+    
+    // Smooth transition from loading
+    const loader = document.getElementById('soul-awakening');
+    if(loader) {
+      loader.style.opacity = '0';
+      setTimeout(() => loader.remove(), 500);
+    }
+  } catch(e) {
+    console.error("Initialization failed", e);
+    const errEl = document.getElementById('init-error');
+    if(errEl) {
+      errEl.textContent = "The Abyss stares back: " + e.message;
+      errEl.style.display = 'block';
+    }
+  }
+}
 
 /* LONG PRESS WORDMARK */
 let wpt=null;
@@ -634,40 +610,67 @@ function showPanel(id){
   if(active)active.classList.remove('hidden');
   currentView=id.replace('view-','');
   const fab=document.getElementById('fab-container');
-  if(fab)fab.style.display=(id==='view-soup'||id==='view-sanctuary')?'flex':'none';
+  if(fab) {
+    fab.style.display='flex';
+    updateFabMenu(id.replace('view-',''));
+  }
   firefly.sd(id==='view-lighthouse'||id==='view-chat'?80:20);
 }
 
 /* HEADER BUTTONS */
 function updateHeaderButtons(){
   const c=document.getElementById('header-actions');
-  c.innerHTML=`<button class="hdr-btn" id="hdr-void">○</button><button class="hdr-btn" id="hdr-export">⩔</button><label class="hdr-import-label">⩓<input type="file" accept=".json" id="import-json-input" style="display:none;"></label><button class="hdr-btn" id="hdr-sync">∞</button><button class="hdr-btn" id="hdr-search">⌖</button>`;
-  document.getElementById('hdr-void').onclick=()=>openVoidView();
-  document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
-  document.getElementById('import-json-input').onchange=e=>importJSON(e);
-  document.getElementById('hdr-sync').onclick=()=>{showToast('Syncing with Akashic...');restoreFromAkashic();};
+  c.innerHTML=`
+    <button class="hdr-btn" id="hdr-search" title="Search">⌖</button>
+    <button class="hdr-btn" id="hdr-void" title="Void">◌</button>
+    <button class="hdr-btn" id="hdr-sync" title="Sync">∞</button>
+    <button class="hdr-btn" id="hdr-export" title="Backup/Export">⩔</button>
+    <button class="hdr-btn" id="hdr-settings" title="Settings">⚙</button>
+  `;
   document.getElementById('hdr-search').onclick=()=>openGlobalSearch();
+  document.getElementById('hdr-void').onclick=()=>openVoidView();
+  document.getElementById('hdr-sync').onclick=()=>{showToast('Syncing with Akashic...');restoreFromAkashic();};
+  document.getElementById('hdr-export').onclick=()=>{showToast('Exporting Backup...');exportJSON();};
+  document.getElementById('hdr-settings').onclick=()=>openSettingsModal();
 }
 
 /* FAB MENU */
-function updateFabMenu(mode){
+function updateFabMenu(view){
   const menu=document.getElementById('fab-menu');
   let html = '';
-  if(mode==='soup'){
+  if(view==='soup'){
     html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡Quick Capture</button>`;
-  } else {
-    html=`<button class="fab-item" id="fab-new-char">◈ New Character</button><button class="fab-item" id="fab-open-forge">⚒ Character Forge</button>`;
+  } else if(view==='sanctuary') {
+    html=`<button class="fab-item" id="fab-new-char">◈ New Character</button>`;
+  } else if(view==='lighthouse') {
+    html=`
+      <button class="fab-item" id="fab-save-discourse">💾 Save Discourse</button>
+      <button class="fab-item" id="fab-extract-mosaic">◈ Extract Mosaic</button>
+      <button class="fab-item" id="fab-export-md">📄 Export Markdown</button>
+      <button class="fab-item" id="fab-export-pdf">📑 Export PDF</button>
+      <button class="fab-item" id="fab-delete-discourse" style="color:#ff6060;border-color:var(--danger);">✕ Delete Discourse</button>
+    `;
+  } else if(view==='chat' || view==='forge') {
+    html=`<button class="fab-item" id="fab-send-soup">✦ Send to Soup</button>`;
   }
+  
   html += `<button class="fab-item" id="fab-settings">⚙ Settings</button>`;
   menu.innerHTML = html;
   
-  if(mode==='soup'){
+  if(view==='soup'){
     document.getElementById('fab-new-folder').onclick=()=>{closeFab();openFolderModal();};
     document.getElementById('fab-new-discourse-fab').onclick=()=>{closeFab();handleNewDiscourse();};
     document.getElementById('fab-quick-capture').onclick=()=>{closeFab();openQuickCapture();};
-  } else {
+  } else if(view==='sanctuary') {
     document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
-    document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
+  } else if(view==='lighthouse') {
+    document.getElementById('fab-save-discourse').onclick=()=>{closeFab();saveCurrentDiscourse();};
+    document.getElementById('fab-extract-mosaic').onclick=()=>{closeFab();extractMemory();};
+    document.getElementById('fab-export-md').onclick=()=>{closeFab();exportMarkdown();};
+    document.getElementById('fab-export-pdf').onclick=()=>{closeFab();exportPDF();};
+    document.getElementById('fab-delete-discourse').onclick=()=>{closeFab();deleteCurrentDiscourse();};
+  } else if(view==='chat' || view==='forge') {
+    document.getElementById('fab-send-soup').onclick=()=>{closeFab();sendChatToSoup();};
   }
   document.getElementById('fab-settings').onclick=()=>{closeFab();openSettingsModal();};
 }
@@ -846,16 +849,29 @@ async function handleNewCharacter(){const c=await createCharacter();openCharacte
 
 async function openCharacterForge(id){
   activeCharId=id||null;
-  const c=id?await getCharacter(id):{name:"",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1};
+  let c;
+  if(id) {
+    c = await getCharacter(id);
+  } else {
+    c = {name:"",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1,summary:"",memory:""};
+  }
+  
   document.getElementById('forge-name').value=c.name||"";
   document.getElementById('forge-role').value=c.role||"";
-  document.getElementById('forge-backstory').value=c.backstory||"";
-  document.getElementById('forge-personality').value=c.personality||"";
-  document.getElementById('forge-lorebook').value=c.lorebook||"";
-  document.getElementById('forge-scenario').value=c.scenario||"";
-  document.getElementById('forge-inclination').value=c.inclination||"";
-  document.getElementById('forge-relationships').value=c.relationships||"";
-  document.getElementById('forge-pc-info').value=c.pc_info||"";
+  
+  // Migration logic for dual-box
+  let summary = c.summary || "";
+  if(!summary && (c.personality || c.inclination || c.pc_info)) {
+    summary = [c.personality, c.inclination, c.pc_info].filter(Boolean).join("\n\n");
+  }
+  document.getElementById('forge-summary').value=summary;
+
+  let memory = c.memory || "";
+  if(!memory && (c.backstory || c.lorebook || c.scenario || c.relationships)) {
+    memory = [c.backstory, c.lorebook, c.scenario, c.relationships].filter(Boolean).join("\n\n");
+  }
+  document.getElementById('forge-memory').value=memory;
+
   document.getElementById('forge-temp').value=c.temperature||1;
   document.getElementById('forge-temp-val').textContent=Number(c.temperature||1).toFixed(1);
   showPanel('view-forge');
@@ -865,13 +881,8 @@ async function saveCharacterForge(){
   const data={
     name:document.getElementById('forge-name').value.trim()||"Unnamed Soul",
     role:document.getElementById('forge-role').value.trim(),
-    backstory:document.getElementById('forge-backstory').value,
-    personality:document.getElementById('forge-personality').value,
-    lorebook:document.getElementById('forge-lorebook').value,
-    scenario:document.getElementById('forge-scenario').value,
-    inclination:document.getElementById('forge-inclination').value,
-    relationships:document.getElementById('forge-relationships').value,
-    pc_info:document.getElementById('forge-pc-info').value,
+    summary:document.getElementById('forge-summary').value,
+    memory:document.getElementById('forge-memory').value,
     temperature:parseFloat(document.getElementById('forge-temp').value)
   };
   if(activeCharId)await updateCharacter(activeCharId,data);
@@ -900,32 +911,74 @@ async function handleChatSend(){
   const input=document.getElementById('chat-input');
   const text=input.value.trim();if(!text||!activeCharId)return;
   input.value='';input.style.height='auto';
-  appendChatMessage('user',text);
+  
+  const role = chatNarratorMode ? 'narrator' : 'user';
+  appendChatMessage(role, text);
+  
   const char=await getCharacter(activeCharId);
   const history=await dbGetByIndex('history','charId',activeCharId);
-  const response=await callAIForChat(char,history,text);
+  const response=await callAIForChat(char,history,text,chatNarratorMode);
   if(response){
     appendChatMessage('char',response);
-    await dbPut('history',{charId:activeCharId,role:'user',content:text,created_at:Date.now()});
+    await dbPut('history',{charId:activeCharId,role:role,content:text,created_at:Date.now()});
     await dbPut('history',{charId:activeCharId,role:'char',content:response,created_at:Date.now()});
   }
 }
 
-async function callAIForChat(char,history,text){
+async function callAIForChat(char,history,text,isNarrator=false){
   const key=localStorage.getItem("nq_api_key")||"";if(!key){showToast("Add API Key in Settings");return null;}
-  const sys=`You are ${char.name}. ${char.role}. Personality: ${char.personality}. Backstory: ${char.backstory}. Lore: ${char.lorebook}. Scenario: ${char.scenario}. Inclination: ${char.inclination}. Relationships: ${char.relationships}. PC Info: ${char.pc_info}. Respond in character, concise and evocative.`;
-  const msgs=[{role:'system',content:sys},...history.slice(-10).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:text}];
+  
+  let sys = `You are ${char.name}. ${char.role}.\n\nSUMMARY:\n${char.summary || (char.personality + ' ' + char.inclination)}\n\nMEMORY:\n${char.memory || (char.backstory + ' ' + char.lorebook)}\n\nRespond in character, concise and evocative.`;
+  
+  if(isNarrator) {
+    sys = `You are the World Narrator for ${char.name}'s story. Describe the environment, actions, and atmosphere. Stay consistent with the character's summary and memory:\n\nSUMMARY:\n${char.summary}\n\nMEMORY:\n${char.memory}\n\nMaintain a literary and immersive style. Use *actions* and "speech" appropriately.`;
+  }
+
+  const msgs=[{role:'system',content:sys},...history.slice(-12).map(h=>({role:h.role==='user'?'user':(h.role==='narrator'?'assistant':'assistant'),content:h.content})),{role:'user',content:text}];
   try{
     const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",messages:msgs,temperature:char.temperature||1.0})});
     const data=await res.json();return data.choices?.[0]?.message?.content||null;
   }catch(err){console.error(err);showToast("AI call failed");return null;}
 }
 
+function formatChatMessage(text){
+  let t = escHtml(text);
+  t = t.replace(/\*(.+?)\*/g, '<em class="chat-action">*$1*</em>');
+  t = t.replace(/&quot;(.+?)&quot;/g, '<span class="chat-speech">"$1"</span>');
+  return t;
+}
+
 function appendChatMessage(role,text){
-  const c=document.getElementById('chat-messages');const m=document.createElement('div');m.className=`chat-msg ${role==='user'?'user':'char'}`;m.textContent=text;c.appendChild(m);c.scrollTop=c.scrollHeight;
+  const c=document.getElementById('chat-messages');const m=document.createElement('div');
+  m.className=`chat-msg ${role==='user'?'user':(role==='narrator'?'narrator':'char')}`;
+  m.innerHTML=formatChatMessage(text);
+  c.appendChild(m);c.scrollTop=c.scrollHeight;
 }
 
 async function clearChatHistory(){if(!activeCharId||!confirm("Clear chat history?"))return;const h=await dbGetByIndex('history','charId',activeCharId);for(const x of h)await dbDelete('history',x.id);document.getElementById('chat-messages').innerHTML='';showToast("History cleared");}
+
+
+async function sendChatToSoup(){
+  if(!activeCharId) return;
+  const char = await getCharacter(activeCharId);
+  const history = await dbGetByIndex('history', 'charId', activeCharId);
+  if(!history.length) { showToast("No history to send"); return; }
+  
+  let md = `# Chat with ${char.name}\n\n`;
+  history.forEach(h => {
+    md += `**${h.role === 'user' ? 'You' : (h.role === 'narrator' ? 'Narrator' : char.name)}**: ${h.content}\n\n`;
+  });
+  
+  const disc = await createDiscourse({
+    title: `Chat: ${char.name} (${new Date().toLocaleDateString()})`,
+    raw_text: md,
+    folder_id: null
+  });
+  
+  showToast("Sent to Soup ✦");
+  openDiscourse(disc.id);
+}
+
 
 /* VOID */
 
@@ -1172,6 +1225,12 @@ document.addEventListener('DOMContentLoaded',()=> {
   document.getElementById('btn-chat-edit').addEventListener('click',()=>openCharacterForge(activeCharId));
   document.getElementById('btn-chat-clear').addEventListener('click',clearChatHistory);
   document.getElementById('btn-send').addEventListener('click',handleChatSend);
+
+  document.getElementById('btn-narrator-toggle').onclick = () => {
+    chatNarratorMode = !chatNarratorMode;
+    document.getElementById('btn-narrator-toggle').classList.toggle('gold', chatNarratorMode);
+    document.getElementById('chat-input').placeholder = chatNarratorMode ? 'Narrate world events...' : 'Send a message...';
+  };
   document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleChatSend();}});
   document.getElementById('chat-input').addEventListener('input',function(){this.style.height='auto';this.style.height=(this.scrollHeight)+'px';});
 
