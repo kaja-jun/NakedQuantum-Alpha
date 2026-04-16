@@ -201,6 +201,18 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .btn-forge-save { flex: 2; background: var(--accent); color: #000; border: none; border-radius: 10px; padding: 14px; font-weight: 900; font-size: 14px; letter-spacing: 1px; }
 .btn-forge-close { flex: 1; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-weight: 700; font-size: 14px; }
 
+.chat-view { background: var(--bg); display: flex; flex-direction: column; }
+.chat-header { height: 56px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 14px; gap: 12px; background: var(--surface); }
+.chat-char-info { flex: 1; min-width: 0; }
+.chat-char-name { font-size: 14px; font-weight: 700; color: var(--accent); }
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
+.chat-msg { max-width: 85%; padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.5; position: relative; }
+.chat-msg.user { align-self: flex-end; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-bottom-right-radius: 2px; }
+.chat-msg.char { align-self: flex-start; background: var(--surface); border: 1px solid var(--accent-dim); color: var(--text); border-bottom-left-radius: 2px; }
+.chat-input-area { padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 10px; align-items: flex-end; }
+.chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; resize: none; max-height: 120px; font-family: inherit; }
+.chat-input:focus { border-color: var(--accent-dim); }
+.btn-send { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); border: none; color: #000; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 .cosm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 800; display: none; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 .cosm-overlay.active { display: block; }
@@ -422,13 +434,28 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
       <button class="btn-forge-save" id="btn-forge-save">Anchor Soul</button>
     </div>
   </div>
-  </div>
 
-  <div class="fab-container" id="fab-container">
+  <div class="view-panel chat-view hidden" id="view-chat">
+    <div class="chat-header">
+      <button class="btn-back-table" id="btn-chat-back">← Sanctuary</button>
+      <div class="chat-char-info">
+        <div class="chat-char-name" id="chat-char-name">Character Name</div>
+      </div>
+      <button class="tbtn" id="btn-chat-edit">✎</button>
+      <button class="tbtn" id="btn-chat-clear">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chat-input" placeholder="Send a message..." rows="1"></textarea>
+      <button class="btn-send" id="btn-send">✦</button>
+    </div>
+  </div>
+</div>
+
+<div class="fab-container" id="fab-container">
   <div class="fab-menu" id="fab-menu"></div>
   <button class="fab-main" id="fab-main">+</button>
-  </div>
-
+</div>
 
 <div class="cosm-overlay" id="cosm-overlay"></div>
 
@@ -521,7 +548,7 @@ let longPressTimer=null,isLongPress=false,longPressConsumed=false,touchStartPos=
 const LONG_PRESS_DURATION=1000,MOVE_THRESHOLD=10;
 
 /* FIREFLY */
-class FF{constructor(){this.canvas=document.getElementById('firefly-canvas');this.ctx=this.canvas.getContext('2d');this.p=[];this.d=20;this.r();window.addEventListener('resize',()=>this.r());this.a();}r(){this.canvas.width=innerWidth;this.canvas.height=innerHeight;}sd(l){this.d=Math.min(250,20+Math.floor(l/40));}a(){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);while(this.p.length<this.d)this.p.push({x:Math.random()*this.canvas.width,y:Math.random()*this.canvas.height,s:Math.random()*2+.5,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,a:Math.random()*.5+.2,p:Math.random()*.02+.005});if(this.p.length>this.d)this.p.splice(this.d);this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.p;if(p.a>.8||p.a<.2)p.p*=-1;if(p.x<0)p.x=this.canvas.width;if(p.x>this.canvas.width)p.x=0;if(p.y<0)p.y=this.canvas.height;if(p.y>this.canvas.height)p.y=0;this.ctx.beginPath();this.ctx.arc(p.x,p.y,p.s,0,Math.PI*2);this.ctx.fillStyle=`rgba(200,160,80,${p.a})`;this.ctx.fill();});requestAnimationFrame(()=>this.a());}}
+class FF{constructor(){this.canvas=document.getElementById('firefly-canvas');this.ctx=this.canvas.getContext('2d');this.p=[];this.d=15;this.r();window.addEventListener('resize',()=>this.r());this.a();}r(){this.canvas.width=innerWidth;this.canvas.height=innerHeight;}sd(l){this.d=Math.min(60,15+Math.floor(l/200));}a(){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);while(this.p.length<this.d)this.p.push({x:Math.random()*this.canvas.width,y:Math.random()*this.canvas.height,s:Math.random()*1.5+.2,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,a:Math.random()*.4+.1,p:Math.random()*.01+.002});if(this.p.length>this.d)this.p.splice(this.d);this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.p;if(p.a>.6||p.a<.1)p.p*=-1;if(p.x<0)p.x=this.canvas.width;if(p.x>this.canvas.width)p.x=0;if(p.y<0)p.y=this.canvas.height;if(p.y>this.canvas.height)p.y=0;this.ctx.beginPath();this.ctx.arc(p.x,p.y,p.s,0,Math.PI*2);this.ctx.fillStyle=`rgba(200,160,80,${p.a})`;this.ctx.fill();});requestAnimationFrame(()=>this.a());}}
 const firefly=new FF();
 
 /* DB */
@@ -577,7 +604,7 @@ async function deleteMosaicTile(dId){const t=await getMosaicTile(dId);if(t)await
 async function getBacklink(dId){const l=await dbGetByIndex("cosm_backlinks","discourse_id",dId);return l.length>0?l[0]:null;}
 
 /* INIT */
-async function init(){updateHeaderButtons();await renderTableView();document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';}
+async function init(){updateHeaderButtons();updateFabMenu(currentMode);await renderTableView();document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';}
 
 /* LONG PRESS WORDMARK */
 let wpt=null;
@@ -589,51 +616,66 @@ wEl.addEventListener('touchmove',()=>{wEl.classList.remove('pressing');clearTime
 /* APP MODE */
 function switchAppMode(mode){
   currentMode=mode;
-  const sp=document.getElementById('view-soup'),snp=document.getElementById('view-sanctuary'),vp=document.getElementById('view-void'),lp=document.getElementById('view-lighthouse'),fp=document.getElementById('view-forge'),fab=document.getElementById('fab-container'),mt=document.getElementById('mode-toast');
-  [sp,snp,vp,lp,fp].forEach(p=>p.classList.add('hidden'));
-  if(mode==='soup'){sp.classList.remove('hidden');mt.textContent='✦ THE SOUP';}
-  else{snp.classList.remove('hidden');mt.textContent='◈ THE SANCTUARY';renderSanctuaryView();}
-  fab.style.display=(mode==='soup'||mode==='sanctuary')?'flex':'none';
+  const mt=document.getElementById('mode-toast');
+  if(mode==='soup'){showPanel('view-soup');mt.textContent='✦ THE SOUP';}
+  else{showPanel('view-sanctuary');mt.textContent='◈ THE SANCTUARY';renderSanctuaryView();}
   mt.style.opacity='1';setTimeout(()=>{mt.style.opacity='0';},1500);
   updateHeaderButtons();updateFabMenu(mode);
+}
+
+/* SHOW PANEL (Unifying logic) */
+function showPanel(id){
+  const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat'];
+  panels.forEach(p=>{
+    const el=document.getElementById(p);
+    if(el)el.classList.add('hidden');
+  });
+  const active=document.getElementById(id);
+  if(active)active.classList.remove('hidden');
+  currentView=id.replace('view-','');
+  const fab=document.getElementById('fab-container');
+  if(fab)fab.style.display=(id==='view-soup'||id==='view-sanctuary')?'flex':'none';
+  firefly.sd(id==='view-lighthouse'||id==='view-chat'?80:20);
 }
 
 /* HEADER BUTTONS */
 function updateHeaderButtons(){
   const c=document.getElementById('header-actions');
-  c.innerHTML=`<button class="hdr-btn" id="hdr-void">○</button><button class="hdr-btn" id="hdr-export">⩔</button><label class="hdr-import-label">⩓<input type="file" accept=".json" id="import-json-input" style="display:none;"></label><button class="hdr-btn" id="hdr-sync">∞</button><button class="hdr-btn" id="hdr-search">⌖</button><button class="hdr-btn" id="hdr-settings">⚙</button>`;
+  c.innerHTML=`<button class="hdr-btn" id="hdr-void">○</button><button class="hdr-btn" id="hdr-export">⩔</button><label class="hdr-import-label">⩓<input type="file" accept=".json" id="import-json-input" style="display:none;"></label><button class="hdr-btn" id="hdr-sync">∞</button><button class="hdr-btn" id="hdr-search">⌖</button>`;
   document.getElementById('hdr-void').onclick=()=>openVoidView();
   document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
   document.getElementById('import-json-input').onchange=e=>importJSON(e);
   document.getElementById('hdr-sync').onclick=()=>{showToast('Syncing with Akashic...');restoreFromAkashic();};
   document.getElementById('hdr-search').onclick=()=>openGlobalSearch();
-  document.getElementById('hdr-settings').onclick=()=>openSettingsModal();
 }
 
 /* FAB MENU */
 function updateFabMenu(mode){
   const menu=document.getElementById('fab-menu');
+  let html = '';
   if(mode==='soup'){
-    menu.innerHTML=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡Quick Capture</button>`;
+    html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡Quick Capture</button>`;
+  } else {
+    html=`<button class="fab-item" id="fab-new-char">◈ New Character</button><button class="fab-item" id="fab-open-forge">⚒ Character Forge</button>`;
+  }
+  html += `<button class="fab-item" id="fab-settings">⚙ Settings</button>`;
+  menu.innerHTML = html;
+  
+  if(mode==='soup'){
     document.getElementById('fab-new-folder').onclick=()=>{closeFab();openFolderModal();};
     document.getElementById('fab-new-discourse-fab').onclick=()=>{closeFab();handleNewDiscourse();};
     document.getElementById('fab-quick-capture').onclick=()=>{closeFab();openQuickCapture();};
   } else {
-    menu.innerHTML=`<button class="fab-item" id="fab-new-char">◈ New Character</button><button class="fab-item" id="fab-open-forge">⚒ Character Forge</button>`;
     document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
     document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
   }
+  document.getElementById('fab-settings').onclick=()=>{closeFab();openSettingsModal();};
 }
 
-/* SOUP VIEW SWITCHING */
-function switchView(view,slideBack=false){
-  const panels={soup:document.getElementById('view-soup'),void:document.getElementById('view-void'),lighthouse:document.getElementById('view-lighthouse')};
-  Object.values(panels).forEach(p=>{p.classList.add('hidden');if(slideBack)p.classList.add('slide-back');else p.classList.remove('slide-back');});
-  const t=panels[view]||panels.soup;t.classList.remove('hidden');t.classList.remove('slide-back');
-  currentView=view;
-  const fab=document.getElementById('fab-container');
-  if(fab)fab.style.display=(view==='table'&&currentMode==='soup')?'flex':'none';
-  firefly.sd(view==='lighthouse'?80:20);
+async function goBack(){
+  if(currentView==='lighthouse' && currentDiscourseId) await saveCurrentDiscourse(true);
+  if(currentMode==='soup') { showPanel('view-soup'); renderTableView(); }
+  else { showPanel('view-sanctuary'); renderSanctuaryView(); }
 }
 
 /* RENDER TABLE */
@@ -724,7 +766,7 @@ async function openDiscourse(id){
   document.getElementById("discourse-title").value=disc.title||"";
   document.getElementById("content-textarea").value=disc.raw_text||"";
   await renderMeta(disc);await renderMosaicDisplay(id);
-  setEditorMode('write');switchView('lighthouse');
+  setEditorMode('write');showPanel('view-lighthouse');
   if(disc.folder_id&&currentFolderId!==disc.folder_id){const f=await dbGet("cosm_folders",disc.folder_id);if(f){breadcrumbPath=[{id:null,name:'◈ root'},{id:disc.folder_id,name:f.name}];currentFolderId=disc.folder_id;}}
 }
 
@@ -734,7 +776,7 @@ async function renderMeta(disc){
   let html=`<span>${date}</span>`;
   if(disc.folder_id){const f=await dbGet("cosm_folders",disc.folder_id);if(f)html+=`<span class="meta-separator">·</span><span>▸ ${escHtml(f.name)}</span>`;}
   const bl=await getBacklink(disc.id);
-  if(bl)html+=`<span class="meta-separator">·</span><a class="source-link" href="/">⟵ ${escHtml(bl.char_name||"Sanctuary")}</a>`;
+  if(bl)html+=`<span class="meta-separator">·</span><a class="source-link" href="#">⟵ ${escHtml(bl.char_name||"Sanctuary")}</a>`;
   el.innerHTML=html;
 }
 
@@ -770,12 +812,10 @@ async function newDiscourseAtRoot(){
 
 function handleNewDiscourse(){currentFolderId===null?newDiscourseAtRoot():newDiscourseInCurrent();}
 
-async function goToTable(){if(currentDiscourseId)await saveCurrentDiscourse(true);switchView('table',true);await renderTableView();}
-
 async function deleteCurrentDiscourse(){
   if(!currentDiscourseId)return;if(!confirm("Move this discourse to the Void?"))return;
   await deleteDiscourse(currentDiscourseId);mosaicCache[currentDiscourseId]=null;currentDiscourseId=null;
-  await goToTable();showToast("Moved to Void ◌");
+  await goBack();showToast("Moved to Void ◌");
 }
 
 /* SANCTUARY */
@@ -791,7 +831,7 @@ async function renderSanctuaryView(){
   for(const c of filtered){
     const card=document.createElement('div');card.className='character-card card';
     card.innerHTML=`<div><div class="char-card-name">${escHtml(c.name)}</div><div class="char-card-role">${escHtml(c.role||'No role assigned')}</div></div><div class="char-card-footer"><div class="char-card-meta">${new Date(c.updated_at).toLocaleDateString()}</div></div>`;
-    card.addEventListener('click',()=>{if(!longPressConsumed)openCharacterForge(c.id);});
+    card.addEventListener('click',()=>{if(!longPressConsumed)openChat(c.id);});
     card.addEventListener('mousedown',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}));
     card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
     card.addEventListener('touchstart',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}),{passive:true});
@@ -818,10 +858,7 @@ async function openCharacterForge(id){
   document.getElementById('forge-pc-info').value=c.pc_info||"";
   document.getElementById('forge-temp').value=c.temperature||1;
   document.getElementById('forge-temp-val').textContent=Number(c.temperature||1).toFixed(1);
-
-  [document.getElementById('view-soup'),document.getElementById('view-sanctuary')].forEach(p=>p.classList.add('hidden'));
-  document.getElementById('view-forge').classList.remove('hidden');
-  document.getElementById('fab-container').style.display='none';
+  showPanel('view-forge');
 }
 
 async function saveCharacterForge(){
@@ -844,15 +881,55 @@ async function saveCharacterForge(){
 }
 
 function closeCharacterForge(){
-  document.getElementById('view-forge').classList.add('hidden');
-  document.getElementById('view-sanctuary').classList.remove('hidden');
-  document.getElementById('fab-container').style.display='flex';
+  showPanel('view-sanctuary');
   activeCharId=null;renderSanctuaryView();
 }
 
+/* CHAT */
+async function openChat(id){
+  activeCharId=id;
+  const c=await getCharacter(id);
+  document.getElementById('chat-char-name').textContent=c.name;
+  document.getElementById('chat-messages').innerHTML='';
+  const history=await dbGetByIndex('history','charId',id);
+  history.forEach(h=>appendChatMessage(h.role,h.content));
+  showPanel('view-chat');
+}
+
+async function handleChatSend(){
+  const input=document.getElementById('chat-input');
+  const text=input.value.trim();if(!text||!activeCharId)return;
+  input.value='';input.style.height='auto';
+  appendChatMessage('user',text);
+  const char=await getCharacter(activeCharId);
+  const history=await dbGetByIndex('history','charId',activeCharId);
+  const response=await callAIForChat(char,history,text);
+  if(response){
+    appendChatMessage('char',response);
+    await dbPut('history',{charId:activeCharId,role:'user',content:text,created_at:Date.now()});
+    await dbPut('history',{charId:activeCharId,role:'char',content:response,created_at:Date.now()});
+  }
+}
+
+async function callAIForChat(char,history,text){
+  const key=localStorage.getItem("nq_api_key")||"";if(!key){showToast("Add API Key in Settings");return null;}
+  const sys=`You are ${char.name}. ${char.role}. Personality: ${char.personality}. Backstory: ${char.backstory}. Lore: ${char.lorebook}. Scenario: ${char.scenario}. Inclination: ${char.inclination}. Relationships: ${char.relationships}. PC Info: ${char.pc_info}. Respond in character, concise and evocative.`;
+  const msgs=[{role:'system',content:sys},...history.slice(-10).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:text}];
+  try{
+    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",messages:msgs,temperature:char.temperature||1.0})});
+    const data=await res.json();return data.choices?.[0]?.message?.content||null;
+  }catch(err){console.error(err);showToast("AI call failed");return null;}
+}
+
+function appendChatMessage(role,text){
+  const c=document.getElementById('chat-messages');const m=document.createElement('div');m.className=`chat-msg ${role==='user'?'user':'char'}`;m.textContent=text;c.appendChild(m);c.scrollTop=c.scrollHeight;
+}
+
+async function clearChatHistory(){if(!activeCharId||!confirm("Clear chat history?"))return;const h=await dbGetByIndex('history','charId',activeCharId);for(const x of h)await dbDelete('history',x.id);document.getElementById('chat-messages').innerHTML='';showToast("History cleared");}
+
 /* VOID */
 
-function closeVoidView(){switchView('table',true);}
+function closeVoidView(){goBack();}
 async function renderVoidView(){
   const s=document.getElementById('void-surface');s.innerHTML='';
   const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();
@@ -872,6 +949,7 @@ async function renderVoidView(){
   }
   s.appendChild(list);
 }
+function openVoidView() { showPanel('view-void'); renderVoidView(); }
 async function handleRestore(id,type){if(type==='discourse')await restoreDiscourse(id);else await restoreCharacter(id);showToast("Restored ✓");await renderVoidView();}
 async function handlePurge(id,type){if(!confirm("Permanently delete?"))return;if(type==='discourse')await purgeDiscourse(id);else await purgeCharacter(id);showToast("Purged");await renderVoidView();}
 async function purgeAll(){const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();if(!delD.length&&!delC.length){showToast("Void is empty");return;}if(!confirm(`Permanently delete all items?`))return;for(const d of delD)await purgeDiscourse(d.id);for(const c of delC)await purgeCharacter(c.id);showToast("Void purged");await renderVoidView();}
@@ -891,7 +969,7 @@ async function onGlobalSearchInput(query){
   const all=[...mf,...md,...mc];
   if(!all.length){re.innerHTML='<div class="global-search-empty">No results</div>';return;}
   re.innerHTML=all.map(r=>`<div class="global-search-result" data-type="${r.type}" data-id="${r.item.id}"><div class="global-search-result-title">${escHtml(r.type==='folder'?r.item.name:(r.type==='character'?r.item.name:(r.item.title||'Untitled')))}<span class="global-search-result-type ${r.type}">${r.type}</span></div><div class="global-search-result-path">${escHtml(r.path)}</div></div>`).join('');
-  re.querySelectorAll('.global-search-result').forEach(el=>{el.addEventListener('click',()=>{const type=el.dataset.type,id=el.dataset.id;closeGlobalSearch();if(type==='folder')enterFolder(id,fm.get(id)?.name||'Folder');else if(type==='character')openCharacterForge(id);else openDiscourse(id);});});
+  re.querySelectorAll('.global-search-result').forEach(el=>{el.addEventListener('click',()=>{const type=el.dataset.type,id=el.dataset.id;closeGlobalSearch();if(type==='folder')enterFolder(id,fm.get(id)?.name||'Folder');else if(type==='character')openChat(id);else openDiscourse(id);});});
 }
 
 /* FAB */
@@ -1021,7 +1099,7 @@ async function extractMemory(){
   if(!currentDiscourseId)return;const rawText=document.getElementById("content-textarea").value.trim();if(!rawText||rawText.length<50){showToast("Write more before extracting");return;}
   const key=localStorage.getItem("nexus_v7_key")||localStorage.getItem("nq_api_key")||"";if(!key){showToast("Add OpenRouter key in Settings");return;}
   document.getElementById("extract-loading").classList.add("visible");
-  try{const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("activeModel_v1")||localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",max_tokens:350,messages:[{role:"system",content:`You are a conceptual anchor extractor. Read the text and return exactly 4-6 anchor phrases. Format: one per line, "Category: brief anchor phrase". Categories: Core tension, Open question, Key concept, Hidden assumption, Named force, Recurring image. Reply with ONLY the list.`},{role:"user",content:rawText.slice(0,3000)}]})});
+  try{const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("activeModel_v1")||localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",max_tokens:350,messages:[{role:"system",content:`You are a conceptual anchor extractor. Read the text and return exactly 4-6 anchor phrases. Format: one per line, \"Category: brief anchor phrase\". Categories: Core tension, Open question, Key concept, Hidden assumption, Named force, Recurring image. Reply with ONLY the list.`},{role:"user",content:rawText.slice(0,3000)}]})});
   const data=await res.json();const raw=data.choices?.[0]?.message?.content||"";if(!raw.trim()){showToast("Nothing extracted");return;}
   const anchors=raw.split("\n").map(l=>l.trim()).filter(l=>l.length>3&&!l.startsWith("#"));
   await saveMosaicTile(currentDiscourseId,anchors);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic anchored ◈");
@@ -1044,17 +1122,15 @@ function closeOverlay(){document.getElementById("cosm-overlay").classList.remove
 
 /* TOAST & UTILS */
 function showToast(msg){const t=document.getElementById("cosm-toast");t.textContent=msg;t.style.opacity="1";clearTimeout(t._timer);t._timer=setTimeout(()=>{t.style.opacity="0";},2200);}
-function escHtml(str){if(!str)return"";return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function escHtml(str){if(!str)return"";return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
 
 /* EVENT BINDING */
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded',()=> {
   document.getElementById('btn-new-discourse').addEventListener('click',handleNewDiscourse);
   document.getElementById('fab-main').addEventListener('click',toggleFab);
-  document.getElementById('fab-new-folder').addEventListener('click',()=>{closeFab();openFolderModal();});
-  document.getElementById('fab-quick-capture').addEventListener('click',()=>{closeFab();openQuickCapture();});
-  document.getElementById('btn-close-void').addEventListener('click',closeVoidView);
+  document.getElementById('btn-close-void').addEventListener('click',()=>goBack());
   document.getElementById('btn-purge-all').addEventListener('click',purgeAll);
-  document.getElementById('btn-back-table').addEventListener('click',goToTable);
+  document.getElementById('btn-back-table').addEventListener('click',()=>goBack());
   document.getElementById('btn-write').addEventListener('click',()=>setEditorMode('write'));
   document.getElementById('btn-view').addEventListener('click',()=>setEditorMode('view'));
   document.getElementById('btn-export-md').addEventListener('click',exportMarkdown);
@@ -1092,9 +1168,25 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
   document.querySelectorAll('.forge-section-header').forEach(h=>{h.addEventListener('click',()=>{h.parentElement.classList.toggle('open');});});
 
-  const fmtMap={'fmt-bold':{wrap:['**','**']},'fmt-italic':{wrap:['*','*']},'fmt-underline':{wrap:['<u>','</u>']},'fmt-quote':{line:'> '},'fmt-code':{wrap:['`','`']},'fmt-codeblock':{block:'```\n',end:'\n```'},'fmt-divider-line':{insert:'\n---\n'},'fmt-bullet':{line:'- '},'fmt-numbered':{line:'1. '},'fmt-h1':{line:'# '},'fmt-h2':{line:'## '},'fmt-h3':{line:'### '}};
+  document.getElementById('btn-chat-back').addEventListener('click',()=>goBack());
+  document.getElementById('btn-chat-edit').addEventListener('click',()=>openCharacterForge(activeCharId));
+  document.getElementById('btn-chat-clear').addEventListener('click',clearChatHistory);
+  document.getElementById('btn-send').addEventListener('click',handleChatSend);
+  document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleChatSend();}});
+  document.getElementById('chat-input').addEventListener('input',function(){this.style.height='auto';this.style.height=(this.scrollHeight)+'px';});
 
-  document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goToTable();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
+  const fmtMap={'fmt-bold':{wrap:['**','**']},'fmt-italic':{wrap:['*','*']},'fmt-underline':{wrap:['<u>','</u>']},'fmt-quote':{line:'> '},'fmt-code':{wrap:['`','`']},'fmt-codeblock':{block:'```\n',end:'\n```'},'fmt-divider-line':{insert:'\n---\n'},'fmt-bullet':{line:'- '},'fmt-numbered':{line:'1. '},'fmt-h1':{line:'# '},'fmt-h2':{line:'## '},'fmt-h3':{line:'### '}};
+  Object.keys(fmtMap).forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.addEventListener('click',()=>applyFormat(fmtMap[id]));
+  });
+
+  document.addEventListener('click',e=>{
+    const fabC=document.getElementById('fab-container');
+    if(fabOpen && fabC && !fabC.contains(e.target)) closeFab();
+  });
+
+  document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goBack();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
 });
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
