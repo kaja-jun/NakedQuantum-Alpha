@@ -51,7 +51,10 @@ class FireflyManager {
     this.animate();
   }
   resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
-  setDensity(len) { this.density = Math.min(150, 10 + Math.floor(len / 100)); }
+  setDensity(len) { 
+    // Minimum 5 fireflies, maximum 60 (to keep it sparse and "Naked")
+    this.density = Math.min(60, 5 + Math.floor(len / 300)); 
+  }
   animate() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     while (this.particles.length < this.density) {
@@ -151,10 +154,18 @@ function updateHeaderActions() {
   if (!container) return;
   if (currentMode === 'soup') {
     container.innerHTML = `
+      <button class="hdr-btn" id="btn-hdr-void" title="The Void" style="color:#ff6060;">◌</button>
+      <button class="hdr-btn" id="btn-hdr-export" title="Export JSON">↓</button>
+      <label class="hdr-btn" title="Import JSON" style="margin:0;">
+        ↑<input type="file" accept=".json" id="input-hdr-import" style="display:none;">
+      </label>
       <button class="hdr-btn" id="btn-hdr-search" title="Search">⌖</button>
       <button class="hdr-btn" id="btn-hdr-sync" title="Akashic Sync">∞</button>
     `;
-    document.getElementById('btn-hdr-search').onclick = () => openModal('modal-search');
+    document.getElementById('btn-hdr-void').onclick = openVoid;
+    document.getElementById('btn-hdr-export').onclick = exportJSON;
+    document.getElementById('input-hdr-import').onchange = importJSON;
+    document.getElementById('btn-hdr-search').onclick = () => { closeModals(); document.getElementById('nq-overlay').classList.add('active'); document.getElementById('modal-search').classList.add('visible'); };
     document.getElementById('btn-hdr-sync').onclick = syncAkashic;
   } else {
     container.innerHTML = `<button class="hdr-btn" title="Lens Settings">⚙</button>`;
@@ -247,45 +258,54 @@ function createCard(className, icon, title, meta, clickHandler, id, type) {
   card.innerHTML = `<div class="card-icon">${icon}</div><div class="card-name">${escHtml(title)}</div><div class="card-meta">${meta}</div>`;
   
   let lpTimer = null;
+  let longPressFired = false;
+
   card.oncontextmenu = (e) => { e.preventDefault(); return false; }; // Kill iOS Copy Menu
   
   card.addEventListener('touchstart', (e) => {
     longPressFired = false;
-    lpCardElement = card;
     card.classList.add('long-pressing');
     lpTimer = setTimeout(() => {
       longPressFired = true;
       mgmtId = id;
       haptic('heavy');
       card.classList.remove('long-pressing');
-      openModal('modal-mgmt');
+      closeModals(); // Close others first
+      document.getElementById('nq-overlay').classList.add('active');
+      document.getElementById('modal-mgmt').classList.add('visible');
     }, 600);
   }, { passive: true });
 
   const cancelTouch = () => {
     if (lpTimer) clearTimeout(lpTimer);
-    if (lpCardElement) lpCardElement.classList.remove('long-pressing');
+    card.classList.remove('long-pressing');
   };
 
   card.addEventListener('touchend', (e) => {
     cancelTouch();
-    if (longPressFired) { e.preventDefault(); longPressFired = false; }
-    else { clickHandler(); }
+    if (longPressFired) {
+      e.preventDefault(); // Stop the click if we long-pressed
+    } else {
+      clickHandler(); // Execute the Enter Folder or Open Discourse
+    }
   });
+  
   card.addEventListener('touchmove', cancelTouch);
   card.addEventListener('touchcancel', cancelTouch);
 
-  // Fallback for mouse
+  // Fallback for mouse (Desktop)
   card.onmousedown = (e) => {
     longPressFired = false;
     lpTimer = setTimeout(() => {
-      longPressFired = true; mgmtId = id; openModal('modal-mgmt');
+      longPressFired = true; mgmtId = id; 
+      closeModals();
+      document.getElementById('nq-overlay').classList.add('active');
+      document.getElementById('modal-mgmt').classList.add('visible');
     }, 600);
   };
   card.onmouseup = card.onmouseleave = () => {
     clearTimeout(lpTimer);
-    if (!longPressFired) clickHandler();
-    longPressFired = false;
+    if (!longPressFired && event.type === 'mouseup') clickHandler();
   };
 
   return card;
@@ -592,6 +612,48 @@ async function syncAkashic() {
   } catch (e) {
     setTimeout(() => showToast("Abyss Offline"), 800);
   }
+}
+/* --- JSON EXPORT / IMPORT --- */
+async function exportJSON() {
+  const folders = await dbCall('folders', 'getAll') || [];
+  const discourses = await dbCall('discourses', 'getAll') || [];
+  const payload = {
+    version: "NakedQuantum",
+    exported_at: new Date().toISOString(),
+    folders: folders,
+    discourses: discourses
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `NakedQuantum_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Archive Exported ↓");
+}
+
+async function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm("Importing will merge data. Conflicts will be overwritten. Proceed?")) {
+    event.target.value = ''; return;
+  }
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (payload.folders) {
+      for (const f of payload.folders) await dbCall('folders', 'put', f);
+    }
+    if (payload.discourses) {
+      for (const d of payload.discourses) await dbCall('discourses', 'put', d);
+    }
+    refresh();
+    showToast("Archive Imported ↑");
+  } catch(err) {
+    showToast("Invalid Archive File");
+  }
+  event.target.value = '';
 }
 
 /* --- 14. BOOT SEQUENCE --- */
