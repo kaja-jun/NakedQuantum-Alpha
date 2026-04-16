@@ -166,11 +166,41 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .void-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .btn-restore { background: none; border: 1px solid var(--accent-dim); color: var(--accent); font-size: 10px; font-weight: 700; padding: 5px 9px; border-radius: 7px; }
 .btn-purge { background: none; border: 1px solid var(--danger); color: #ff6060; font-size: 10px; font-weight: 700; padding: 5px 9px; border-radius: 7px; }
+.void-badge { font-size: 8px; padding: 2px 4px; border-radius: 3px; text-transform: uppercase; font-weight: 900; margin-left: 6px; }
+.void-badge.discourse { background: rgba(200,160,80,0.15); color: var(--accent); }
+.void-badge.character { background: rgba(160,216,160,0.15); color: #a0d8a0; }
 
-.sanctuary-view { background: transparent; display: flex; flex-direction: column; }
-.placeholder-center { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 40px; }
-.placeholder-center h1 { font-family: var(--font-serif); font-size: 24px; color: var(--accent); margin-bottom: 10px; font-weight: normal; }
-.placeholder-center p { opacity: 0.5; font-size: 14px; line-height: 1.6; }
+.sanctuary-view { background: transparent; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.character-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.18s, background 0.18s; min-height: 100px; display: flex; flex-direction: column; justify-content: space-between; }
+.character-card:active { border-color: var(--accent); background: var(--surface2); }
+.character-card.long-pressing { background: var(--surface2); border-color: var(--accent); transform: scale(0.98); }
+.char-card-name { font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.char-card-role { font-size: 11px; color: var(--text); opacity: 0.8; font-style: italic; }
+.char-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px; }
+.char-card-meta { font-size: 9px; color: var(--muted); letter-spacing: 0.5px; }
+
+.forge-view { background: var(--bg); overflow: hidden; }
+.forge-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 16px 100px; }
+.forge-container { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.forge-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.forge-section-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+.forge-section-header:active { background: var(--surface2); }
+.forge-section-title { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 900; text-transform: uppercase; }
+.forge-section-content { padding: 0 16px 16px; display: none; flex-direction: column; gap: 12px; }
+.forge-section.open .forge-section-content { display: flex; }
+.forge-section.open .forge-chevron { transform: rotate(180deg); }
+.forge-chevron { font-size: 12px; transition: transform 0.2s; opacity: 0.5; }
+.forge-input-group { display: flex; flex-direction: column; gap: 6px; }
+.forge-label { font-size: 11px; color: var(--muted); font-weight: 700; }
+.forge-textarea { width: 100%; min-height: 100px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 12px; font-size: 14px; line-height: 1.6; outline: none; resize: none; font-family: var(--font-serif); }
+.forge-textarea:focus { border-color: var(--accent-dim); }
+.range-wrap { display: flex; align-items: center; gap: 12px; }
+.range-input { flex: 1; accent-color: var(--accent); }
+.range-val { font-size: 12px; color: var(--accent); font-weight: 700; min-width: 30px; text-align: right; }
+.forge-footer { position: sticky; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; z-index: 10; }
+.btn-forge-save { flex: 2; background: var(--accent); color: #000; border: none; border-radius: 10px; padding: 14px; font-weight: 900; font-size: 14px; letter-spacing: 1px; }
+.btn-forge-close { flex: 1; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-weight: 700; font-size: 14px; }
+
 
 .cosm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 800; display: none; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 .cosm-overlay.active { display: block; }
@@ -295,20 +325,110 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
   </div>
 
   <div class="view-panel sanctuary-view hidden" id="view-sanctuary">
-    <div class="placeholder-center">
-      <h1>The Sanctuary</h1>
-      <p>The energetic spring.<br>Enter the encounter.</p>
+    <div class="table-action-bar">
+      <button class="btn-table-action" id="btn-new-character">+ New Character</button>
+    </div>
+    <div class="search-bar-wrap">
+      <input class="search-input" id="search-input-sanctuary" placeholder="Search characters...">
+    </div>
+    <div class="table-surface" id="sanctuary-surface"></div>
+  </div>
+
+  <div class="view-panel forge-view hidden" id="view-forge">
+    <div class="forge-scroll">
+      <div class="forge-container" id="forge-container">
+        <div class="forge-section open">
+          <div class="forge-section-header">
+            <span class="forge-section-title">Identity & Backstory</span>
+            <span class="forge-chevron">▾</span>
+          </div>
+          <div class="forge-section-content">
+            <div class="forge-input-group">
+              <span class="forge-label">Name</span>
+              <input class="cosm-input" id="forge-name" placeholder="Character Name...">
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Role / Tagline</span>
+              <input class="cosm-input" id="forge-role" placeholder="The Lone Wanderer...">
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Backstory</span>
+              <textarea class="forge-textarea" id="forge-backstory" placeholder="Origins and history..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="forge-section">
+          <div class="forge-section-header">
+            <span class="forge-section-title">Personality & Core</span>
+            <span class="forge-chevron">▾</span>
+          </div>
+          <div class="forge-section-content">
+            <div class="forge-input-group">
+              <span class="forge-label">Personality</span>
+              <textarea class="forge-textarea" id="forge-personality" placeholder="Traits, quirks, behavior..."></textarea>
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Inclination</span>
+              <textarea class="forge-textarea" id="forge-inclination" placeholder="Motivations and moral compass..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="forge-section">
+          <div class="forge-section-header">
+            <span class="forge-section-title">Lore & World</span>
+            <span class="forge-chevron">▾</span>
+          </div>
+          <div class="forge-section-content">
+            <div class="forge-input-group">
+              <span class="forge-label">Lorebook</span>
+              <textarea class="forge-textarea" id="forge-lorebook" placeholder="World facts relevant to them..."></textarea>
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Scenario</span>
+              <textarea class="forge-textarea" id="forge-scenario" placeholder="Current situation..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="forge-section">
+          <div class="forge-section-header">
+            <span class="forge-section-title">Dynamics & Presence</span>
+            <span class="forge-chevron">▾</span>
+          </div>
+          <div class="forge-section-content">
+            <div class="forge-input-group">
+              <span class="forge-label">Relationship Dynamics</span>
+              <textarea class="forge-textarea" id="forge-relationships" placeholder="How they view others..."></textarea>
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Player Character</span>
+              <textarea class="forge-textarea" id="forge-pc-info" placeholder="Info about the player..."></textarea>
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Quantum Temperature</span>
+              <div class="range-wrap">
+                <input type="range" class="range-input" id="forge-temp" min="0" max="2" step="0.1" value="1">
+                <span class="range-val" id="forge-temp-val">1.0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="forge-footer">
+      <button class="btn-forge-close" id="btn-forge-close">Cancel</button>
+      <button class="btn-forge-save" id="btn-forge-save">Anchor Soul</button>
     </div>
   </div>
-</div>
-
-<div class="fab-container" id="fab-container">
-  <div class="fab-menu" id="fab-menu">
-    <button class="fab-item" id="fab-new-folder">▤ New Folder</button>
-    <button class="fab-item" id="fab-quick-capture" color:#a0d8a0;">⚡Quick Capture</button>
   </div>
+
+  <div class="fab-container" id="fab-container">
+  <div class="fab-menu" id="fab-menu"></div>
   <button class="fab-main" id="fab-main">+</button>
-</div>
+  </div>
+
 
 <div class="cosm-overlay" id="cosm-overlay"></div>
 
@@ -392,8 +512,9 @@ document.addEventListener('touchstart',()=>{},{passive:true});
 /* STATE */
 let db=null,currentMode='soup',currentDiscourseId=null,currentFolderId=null,
     breadcrumbPath=[{id:null,name:'◈ root'}],editorMode='write',currentView='table',
-    fabOpen=false,mgmtItem=null,mosaicCache={},searchQuery='';
+    fabOpen=false,mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
 const AKASHIC_URL='https://wandering-violet-964a.gazajar.workers.dev';
+
 let cosmUserId=localStorage.getItem('cosm_user_id')||crypto.randomUUID();
 localStorage.setItem('cosm_user_id',cosmUserId);
 let longPressTimer=null,isLongPress=false,longPressConsumed=false,touchStartPos={x:0,y:0};
@@ -439,6 +560,16 @@ async function deleteDiscourse(id){const d=await getDiscourse(id);if(!d)return;a
 async function purgeDiscourse(id){await dbDelete("cosm_discourses",id);const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",id);for(const x of t)await dbDelete("cosm_mosaic_tiles",x.id);const b=await dbGetByIndex("cosm_backlinks","discourse_id",id);for(const x of b)await dbDelete("cosm_backlinks",x.id);}
 async function restoreDiscourse(id){const d=await getDiscourse(id);if(!d)return;const{isDeleted,deleted_at,...rest}=d;await dbPut("cosm_discourses",{...rest,updated_at:Date.now()});}
 
+/* CHARACTERS */
+const getCharacters=()=>dbGetAll("characters");
+const getCharacter=id=>dbGet("characters",id);
+async function createCharacter(data={}){const id="c_"+Date.now(),now=Date.now(),char={id,name:"New Character",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1,created_at:now,updated_at:now,...data};await dbPut("characters",char);return char;}
+async function updateCharacter(id,updates){const char=await getCharacter(id);if(!char)return;const u={...char,...updates,updated_at:Date.now()};await dbPut("characters",u);return u;}
+async function deleteCharacter(id){const c=await getCharacter(id);if(!c)return;await dbPut("characters",{...c,isDeleted:true,deleted_at:Date.now()});}
+const purgeCharacter=id=>dbDelete("characters",id);
+async function restoreCharacter(id){const c=await getCharacter(id);if(!c)return;const{isDeleted,deleted_at,...rest}=c;await dbPut("characters",{...rest,updated_at:Date.now()});}
+async function getDeletedCharacters(){const a=await dbGetAll("characters");return a.filter(c=>c.isDeleted).sort((a,b)=>b.deleted_at-a.deleted_at);}
+
 /* MOSAIC */
 async function getMosaicTile(dId){if(mosaicCache[dId]!==undefined)return mosaicCache[dId];const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",dId);if(!t.length){mosaicCache[dId]=null;return null;}t.sort((a,b)=>b.created_at-a.created_at);mosaicCache[dId]=t[0];return t[0];}
 async function saveMosaicTile(dId,anchors){const e=await getMosaicTile(dId);if(e)await dbDelete("cosm_mosaic_tiles",e.id);const id="m_"+Date.now(),tile={id,discourse_id:dId,anchors,created_at:Date.now()};await dbPut("cosm_mosaic_tiles",tile);mosaicCache[dId]=tile;}
@@ -458,26 +589,39 @@ wEl.addEventListener('touchmove',()=>{wEl.classList.remove('pressing');clearTime
 /* APP MODE */
 function switchAppMode(mode){
   currentMode=mode;
-  const sp=document.getElementById('view-soup'),snp=document.getElementById('view-sanctuary'),vp=document.getElementById('view-void'),lp=document.getElementById('view-lighthouse'),fab=document.getElementById('fab-container'),mt=document.getElementById('mode-toast');
-  if(mode==='soup'){[vp,lp,snp].forEach(p=>{p.classList.add('hidden');p.classList.remove('slide-back');});sp.classList.remove('hidden');fab.style.display=currentView==='table'?'flex':'none';mt.textContent='✦ THE SOUP';}
-  else{[sp,vp,lp].forEach(p=>{p.classList.add('hidden');p.classList.remove('slide-back');});snp.classList.remove('hidden');fab.style.display='none';mt.textContent='◈ THE SANCTUARY';}
+  const sp=document.getElementById('view-soup'),snp=document.getElementById('view-sanctuary'),vp=document.getElementById('view-void'),lp=document.getElementById('view-lighthouse'),fp=document.getElementById('view-forge'),fab=document.getElementById('fab-container'),mt=document.getElementById('mode-toast');
+  [sp,snp,vp,lp,fp].forEach(p=>p.classList.add('hidden'));
+  if(mode==='soup'){sp.classList.remove('hidden');mt.textContent='✦ THE SOUP';}
+  else{snp.classList.remove('hidden');mt.textContent='◈ THE SANCTUARY';renderSanctuaryView();}
+  fab.style.display=(mode==='soup'||mode==='sanctuary')?'flex':'none';
   mt.style.opacity='1';setTimeout(()=>{mt.style.opacity='0';},1500);
-  updateHeaderButtons();
+  updateHeaderButtons();updateFabMenu(mode);
 }
 
 /* HEADER BUTTONS */
 function updateHeaderButtons(){
   const c=document.getElementById('header-actions');
-  if(currentMode==='soup'){
-    c.innerHTML=`<button class="hdr-btn" id="hdr-void">○</button><button class="hdr-btn" id="hdr-export">⩔</button><label class="hdr-import-label">⩓<input type="file" accept=".json" id="import-json-input" style="display:none;"></label><button class="hdr-btn" id="hdr-sync">∞</button><button class="hdr-btn" id="hdr-search">⌖</button>`;
-    document.getElementById('hdr-void').onclick=()=>openVoidView();
-    document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
-    document.getElementById('import-json-input').onchange=e=>importJSON(e);
-    document.getElementById('hdr-sync').onclick=()=>{showToast('Restoring from Akashic...');restoreFromAkashic();};
-    document.getElementById('hdr-search').onclick=()=>openGlobalSearch();
+  c.innerHTML=`<button class="hdr-btn" id="hdr-void">○</button><button class="hdr-btn" id="hdr-export">⩔</button><label class="hdr-import-label">⩓<input type="file" accept=".json" id="import-json-input" style="display:none;"></label><button class="hdr-btn" id="hdr-sync">∞</button><button class="hdr-btn" id="hdr-search">⌖</button><button class="hdr-btn" id="hdr-settings">⚙</button>`;
+  document.getElementById('hdr-void').onclick=()=>openVoidView();
+  document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
+  document.getElementById('import-json-input').onchange=e=>importJSON(e);
+  document.getElementById('hdr-sync').onclick=()=>{showToast('Syncing with Akashic...');restoreFromAkashic();};
+  document.getElementById('hdr-search').onclick=()=>openGlobalSearch();
+  document.getElementById('hdr-settings').onclick=()=>openSettingsModal();
+}
+
+/* FAB MENU */
+function updateFabMenu(mode){
+  const menu=document.getElementById('fab-menu');
+  if(mode==='soup'){
+    menu.innerHTML=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡Quick Capture</button>`;
+    document.getElementById('fab-new-folder').onclick=()=>{closeFab();openFolderModal();};
+    document.getElementById('fab-new-discourse-fab').onclick=()=>{closeFab();handleNewDiscourse();};
+    document.getElementById('fab-quick-capture').onclick=()=>{closeFab();openQuickCapture();};
   } else {
-    c.innerHTML=`<button class="hdr-btn" id="hdr-settings">⚙</button>`;
-    document.getElementById('hdr-settings').onclick=()=>openSettingsModal();
+    menu.innerHTML=`<button class="fab-item" id="fab-new-char">◈ New Character</button><button class="fab-item" id="fab-open-forge">⚒ Character Forge</button>`;
+    document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
+    document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
   }
 }
 
@@ -634,27 +778,103 @@ async function deleteCurrentDiscourse(){
   await goToTable();showToast("Moved to Void ◌");
 }
 
+/* SANCTUARY */
+async function renderSanctuaryView(){
+  const surface=document.getElementById('sanctuary-surface');surface.innerHTML='';
+  const allC=await getCharacters();
+  const filtered=allC.filter(c=>!c.isDeleted&&((c.name||'').toLowerCase().includes(sanctuarySearchQuery)||(c.role||'').toLowerCase().includes(sanctuarySearchQuery)));
+
+  if(!filtered.length){surface.innerHTML='<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">No characters found</div></div>';return;}
+
+  const l=document.createElement('div');l.className='cards-section-label';l.textContent='Characters';surface.appendChild(l);
+  const g=document.createElement('div');g.className='cards-grid';
+  for(const c of filtered){
+    const card=document.createElement('div');card.className='character-card card';
+    card.innerHTML=`<div><div class="char-card-name">${escHtml(c.name)}</div><div class="char-card-role">${escHtml(c.role||'No role assigned')}</div></div><div class="char-card-footer"><div class="char-card-meta">${new Date(c.updated_at).toLocaleDateString()}</div></div>`;
+    card.addEventListener('click',()=>{if(!longPressConsumed)openCharacterForge(c.id);});
+    card.addEventListener('mousedown',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}));
+    card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
+    card.addEventListener('touchstart',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}),{passive:true});
+    card.addEventListener('touchend',()=>cancelLP(card));card.addEventListener('touchcancel',()=>cancelLP(card));
+    card.addEventListener('touchmove',e=>handleTM(e,card),{passive:true});
+    g.appendChild(card);
+  }
+  surface.appendChild(g);
+}
+
+async function handleNewCharacter(){const c=await createCharacter();openCharacterForge(c.id);}
+
+async function openCharacterForge(id){
+  activeCharId=id||null;
+  const c=id?await getCharacter(id):{name:"",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1};
+  document.getElementById('forge-name').value=c.name||"";
+  document.getElementById('forge-role').value=c.role||"";
+  document.getElementById('forge-backstory').value=c.backstory||"";
+  document.getElementById('forge-personality').value=c.personality||"";
+  document.getElementById('forge-lorebook').value=c.lorebook||"";
+  document.getElementById('forge-scenario').value=c.scenario||"";
+  document.getElementById('forge-inclination').value=c.inclination||"";
+  document.getElementById('forge-relationships').value=c.relationships||"";
+  document.getElementById('forge-pc-info').value=c.pc_info||"";
+  document.getElementById('forge-temp').value=c.temperature||1;
+  document.getElementById('forge-temp-val').textContent=Number(c.temperature||1).toFixed(1);
+
+  [document.getElementById('view-soup'),document.getElementById('view-sanctuary')].forEach(p=>p.classList.add('hidden'));
+  document.getElementById('view-forge').classList.remove('hidden');
+  document.getElementById('fab-container').style.display='none';
+}
+
+async function saveCharacterForge(){
+  const data={
+    name:document.getElementById('forge-name').value.trim()||"Unnamed Soul",
+    role:document.getElementById('forge-role').value.trim(),
+    backstory:document.getElementById('forge-backstory').value,
+    personality:document.getElementById('forge-personality').value,
+    lorebook:document.getElementById('forge-lorebook').value,
+    scenario:document.getElementById('forge-scenario').value,
+    inclination:document.getElementById('forge-inclination').value,
+    relationships:document.getElementById('forge-relationships').value,
+    pc_info:document.getElementById('forge-pc-info').value,
+    temperature:parseFloat(document.getElementById('forge-temp').value)
+  };
+  if(activeCharId)await updateCharacter(activeCharId,data);
+  else await createCharacter(data);
+  showToast("Soul Anchored ✓");
+  closeCharacterForge();
+}
+
+function closeCharacterForge(){
+  document.getElementById('view-forge').classList.add('hidden');
+  document.getElementById('view-sanctuary').classList.remove('hidden');
+  document.getElementById('fab-container').style.display='flex';
+  activeCharId=null;renderSanctuaryView();
+}
+
 /* VOID */
-async function openVoidView(){switchView('void');await renderVoidView();}
+
 function closeVoidView(){switchView('table',true);}
 async function renderVoidView(){
   const s=document.getElementById('void-surface');s.innerHTML='';
-  const del=await getDeletedDiscourses();
-  if(!del.length){s.innerHTML='<div class="table-empty" style="grid-column:unset;display:flex;"><div class="table-empty-glyph">◌</div><div class="table-empty-text">Void is empty</div></div>';return;}
+  const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();
+  if(!delD.length&&!delC.length){s.innerHTML='<div class="table-empty" style="grid-column:unset;display:flex;"><div class="table-empty-glyph">◌</div><div class="table-empty-text">Void is empty</div></div>';return;}
   const list=document.createElement('div');list.style.cssText='display:flex;flex-direction:column;gap:8px;';
-  for(const d of del){
+  for(const d of delD){
     const date=new Date(d.deleted_at||d.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
     const item=document.createElement('div');item.className='void-item';
-    item.innerHTML=`<div class="void-item-info"><div class="void-item-title">${escHtml(d.title||'Untitled')}</div><div class="void-item-date">Deleted ${date}</div></div><div class="void-item-actions"><button class="btn-restore" data-id="${d.id}">↩ Undeath</button><button class="btn-purge" data-id="${d.id}">✕ Purge</button></div>`;
-    item.querySelector('.btn-restore').addEventListener('click',()=>handleRestore(d.id));
-    item.querySelector('.btn-purge').addEventListener('click',()=>handlePurge(d.id));
+    item.innerHTML=`<div class="void-item-info"><div class="void-item-title">${escHtml(d.title||'Untitled')}<span class="void-badge discourse">Discourse</span></div><div class="void-item-date">Deleted ${date}</div></div><div class="void-item-actions"><button class="btn-restore" onclick="handleRestore('${d.id}','discourse')">↩ Undeath</button><button class="btn-purge" onclick="handlePurge('${d.id}','discourse')">✕ Purge</button></div>`;
+    list.appendChild(item);
+  }
+  for(const c of delC){
+    const date=new Date(c.deleted_at||c.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+    const item=document.createElement('div');item.className='void-item';
+    item.innerHTML=`<div class="void-item-info"><div class="void-item-title">${escHtml(c.name)}<span class="void-badge character">Character</span></div><div class="void-item-date">Deleted ${date}</div></div><div class="void-item-actions"><button class="btn-restore" onclick="handleRestore('${c.id}','character')">↩ Undeath</button><button class="btn-purge" onclick="handlePurge('${c.id}','character')">✕ Purge</button></div>`;
     list.appendChild(item);
   }
   s.appendChild(list);
 }
-async function handleRestore(id){await restoreDiscourse(id);showToast("Restored ✓");await renderVoidView();}
-async function handlePurge(id){if(!confirm("Permanently delete?"))return;await purgeDiscourse(id);showToast("Purged");await renderVoidView();}
-async function purgeAll(){const del=await getDeletedDiscourses();if(!del.length){showToast("Void is empty");return;}if(!confirm(`Permanently delete all ${del.length} item(s)?`))return;for(const d of del)await purgeDiscourse(d.id);showToast("Void purged");await renderVoidView();}
+async function handleRestore(id,type){if(type==='discourse')await restoreDiscourse(id);else await restoreCharacter(id);showToast("Restored ✓");await renderVoidView();}
+async function handlePurge(id,type){if(!confirm("Permanently delete?"))return;if(type==='discourse')await purgeDiscourse(id);else await purgeCharacter(id);showToast("Purged");await renderVoidView();}
+async function purgeAll(){const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();if(!delD.length&&!delC.length){showToast("Void is empty");return;}if(!confirm(`Permanently delete all items?`))return;for(const d of delD)await purgeDiscourse(d.id);for(const c of delC)await purgeCharacter(c.id);showToast("Void purged");await renderVoidView();}
 
 /* SEARCH */
 function onSearchInput(val){searchQuery=val.trim().toLowerCase();renderTableView();}
@@ -662,15 +882,16 @@ async function openGlobalSearch(){document.getElementById('global-search-modal')
 function closeGlobalSearch(){document.getElementById('global-search-modal').classList.remove('visible');document.getElementById('cosm-overlay').classList.remove('active');}
 async function onGlobalSearchInput(query){
   const re=document.getElementById('global-search-results');if(!query.trim()){re.innerHTML='<div class="global-search-empty">Type to search...</div>';return;}
-  const q=query.toLowerCase(),folders=await getFolders(),discs=await getDiscourses();
+  const q=query.toLowerCase(),folders=await getFolders(),discs=await getDiscourses(),chars=await getCharacters();
   const fm=new Map(folders.map(f=>[f.id,f]));
   function gfp(fId){const p=[];let c=fId?fm.get(fId):null;while(c){p.unshift(c.name);c=c.parent_id?fm.get(c.parent_id):null;}return p.length?p.join(' / '):'Root';}
   const mf=folders.filter(f=>(f.name||'').toLowerCase().includes(q)).map(f=>({type:'folder',item:f,path:gfp(f.parent_id)}));
   const md=discs.filter(d=>!d.deleted_at&&((d.title||'').toLowerCase().includes(q)||(d.raw_text||'').toLowerCase().includes(q))).map(d=>({type:'discourse',item:d,path:gfp(d.folder_id)}));
-  const all=[...mf,...md];
+  const mc=chars.filter(c=>!c.isDeleted&&((c.name||'').toLowerCase().includes(q)||(c.role||'').toLowerCase().includes(q))).map(c=>({type:'character',item:c,path:'Sanctuary'}));
+  const all=[...mf,...md,...mc];
   if(!all.length){re.innerHTML='<div class="global-search-empty">No results</div>';return;}
-  re.innerHTML=all.map(r=>`<div class="global-search-result" data-type="${r.type}" data-id="${r.item.id}"><div class="global-search-result-title">${escHtml(r.type==='folder'?r.item.name:(r.item.title||'Untitled'))}<span class="global-search-result-type ${r.type}">${r.type}</span></div><div class="global-search-result-path">${escHtml(r.path)}</div></div>`).join('');
-  re.querySelectorAll('.global-search-result').forEach(el=>{el.addEventListener('click',()=>{const type=el.dataset.type,id=el.dataset.id;closeGlobalSearch();if(type==='folder')enterFolder(id,fm.get(id)?.name||'Folder');else openDiscourse(id);});});
+  re.innerHTML=all.map(r=>`<div class="global-search-result" data-type="${r.type}" data-id="${r.item.id}"><div class="global-search-result-title">${escHtml(r.type==='folder'?r.item.name:(r.type==='character'?r.item.name:(r.item.title||'Untitled')))}<span class="global-search-result-type ${r.type}">${r.type}</span></div><div class="global-search-result-path">${escHtml(r.path)}</div></div>`).join('');
+  re.querySelectorAll('.global-search-result').forEach(el=>{el.addEventListener('click',()=>{const type=el.dataset.type,id=el.dataset.id;closeGlobalSearch();if(type==='folder')enterFolder(id,fm.get(id)?.name||'Folder');else if(type==='character')openCharacterForge(id);else openDiscourse(id);});});
 }
 
 /* FAB */
@@ -693,17 +914,19 @@ async function confirmNewFolder(){
 /* MANAGEMENT */
 function openManagementModal(item){document.getElementById("management-title").textContent=item.name||(item.type==='folder'?'Folder':'Discourse');document.getElementById("management-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");}
 function closeManagementModal(co=true){document.getElementById("management-modal").classList.remove("visible");if(co)closeOverlay();}
-async function handleMgmtExport(){if(!mgmtItem)return;const item=mgmtItem;closeManagementModal();if(item.type==='discourse')await exportDiscourseMarkdown(item.id);else await exportFolderContents(item.id);}
+async function handleMgmtExport(){if(!mgmtItem)return;const item=mgmtItem;closeManagementModal();if(item.type==='discourse')await exportDiscourseMarkdown(item.id);else if(item.type==='folder')await exportFolderContents(item.id);else showToast("Export not available for this item");}
+
 async function handleMgmtDelete(){
   if(!mgmtItem)return;const item=mgmtItem;closeManagementModal();
   if(item.type==='folder'){if(!confirm(`Delete folder "${item.name}"?`))return;await deleteFolder(item.id);if(currentFolderId===item.id){breadcrumbPath.pop();currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;}await renderTableView();showToast("Folder deleted");}
+  else if(item.type==='character'){if(!confirm(`Delete character "${item.name}"?`))return;await deleteCharacter(item.id);await renderSanctuaryView();showToast("Character moved to Void");}
   else{if(!confirm(`Move "${item.name}" to the Void?`))return;await deleteDiscourse(item.id);await renderTableView();showToast("Moved to Void ◌");}
 }
 
 /* RENAME */
 function openRenameModal(){if(!mgmtItem)return;document.getElementById("rename-title").textContent=mgmtItem.type==='folder'?'Rename Folder':'Rename Discourse';document.getElementById("rename-input").value=mgmtItem.name||'';document.getElementById("rename-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");setTimeout(()=>document.getElementById("rename-input").focus(),100);}
 function closeRenameModal(){document.getElementById("rename-modal").classList.remove("visible");closeOverlay();}
-async function confirmRename(){if(!mgmtItem)return;const n=document.getElementById("rename-input").value.trim();if(!n)return;if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});else await updateDiscourse(mgmtItem.id,{title:n});closeRenameModal();await renderTableView();mgmtItem=null;showToast("Renamed");}
+async function confirmRename(){if(!mgmtItem)return;const n=document.getElementById("rename-input").value.trim();if(!n)return;if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});else if(mgmtItem.type==='character'){await updateCharacter(mgmtItem.id,{name:n});renderSanctuaryView();}else await updateDiscourse(mgmtItem.id,{title:n});closeRenameModal();await renderTableView();mgmtItem=null;showToast("Renamed");}
 
 /* MOVE */
 async function openMoveModal(){
@@ -790,8 +1013,8 @@ async function exportMarkdown(){if(!currentDiscourseId)return;await saveCurrentD
 async function exportPDF(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let mh="";if(tile&&tile.anchors&&tile.anchors.length)mh=`<div style="border-left:3px solid #c8a050;padding:10px 16px;margin:16px 0;background:#f9f5ee;"><div style="font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:8px;color:#8a6e35;">◈ MOSAIC</div>${tile.anchors.map(a=>`<div style="margin:4px 0;">• ${escHtml(a)}</div>`).join('')}</div>`;const content=renderContent(d.raw_text||"");const fh=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(d.title||"Discourse")}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:0 auto;padding:20px;color:#1a1a1a;line-height:1.8;}h1{font-size:26px;border-bottom:1px solid #ddd;padding-bottom:10px;margin-bottom:6px;}.meta{font-size:12px;color:#888;margin-bottom:24px;}h2{font-size:20px;}h3{font-size:16px;color:#555;}pre{background:#f4f4f4;padding:14px;border-radius:6px;overflow-x:auto;}code{font-family:monospace;font-size:13px;}blockquote{border-left:3px solid #ccc;padding-left:14px;color:#666;font-style:italic;margin:12px 0;}</style></head><body><h1>${escHtml(d.title||"Untitled")}</h1><div class="meta">${new Date(d.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</div>${mh}${content}</body></html>`;const iframe=document.createElement('iframe');iframe.style.cssText='position:absolute;width:0;height:0;border:none;';document.body.appendChild(iframe);const doc=iframe.contentWindow.document;doc.open();doc.write(fh);doc.close();setTimeout(()=>{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(()=>document.body.removeChild(iframe),10000);},500);}
 async function exportDiscourseMarkdown(id){const d=await getDiscourse(id);if(!d)return;const tile=await getMosaicTile(id);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported");}
 async function exportFolderContents(fId){const discs=(await dbGetByIndex("cosm_discourses","folder_id",fId)).filter(d=>!d.isDeleted);if(!discs.length){showToast("No discourses to export");return;}let md=`# Folder Export\n\n`;for(const d of discs){const t=await getMosaicTile(d.id);md+=`## ${d.title}\n\n`;if(t&&t.anchors&&t.anchors.length)md+=`> **Mosaic**\n${t.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";md+=`\n\n---\n\n`;}const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`folder_export_${new Date().toISOString().slice(0,10)}.md`;a.click();URL.revokeObjectURL(url);showToast(`Exported ${discs.length} discourse(s)`);}
-async function exportJSON(){const f=await dbGetAll("cosm_folders"),d=await dbGetAll("cosm_discourses"),m=await dbGetAll("cosm_mosaic_tiles"),b=await dbGetAll("cosm_backlinks");const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:f,cosm_discourses:d,cosm_mosaic_tiles:m,cosm_backlinks:b};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`NQ_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("Backup exported ✓");}
-async function importJSON(event){const file=event.target.files[0];if(!file)return;if(!confirm("Import will merge with existing data. Continue?")){event.target.value='';return;}try{const text=await file.text();const payload=JSON.parse(text);const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store]))for(const item of payload[store])await dbPut(store,item);}mosaicCache={};await renderTableView();showToast("Import complete ✓");}catch(err){console.error(err);showToast("Import failed");}event.target.value='';}
+async function exportJSON(){const f=await dbGetAll("cosm_folders"),d=await dbGetAll("cosm_discourses"),m=await dbGetAll("cosm_mosaic_tiles"),b=await dbGetAll("cosm_backlinks"),c=await dbGetAll("characters"),h=await dbGetAll("history"),s=await dbGetAll("summaries");const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:f,cosm_discourses:d,cosm_mosaic_tiles:m,cosm_backlinks:b,characters:c,history:h,summaries:s};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`NQ_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("Backup exported ✓");}
+async function importJSON(event){const file=event.target.files[0];if(!file)return;if(!confirm("Import will merge with existing data. Continue?")){event.target.value='';return;}try{const text=await file.text();const payload=JSON.parse(text);const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store]))for(const item of payload[store])await dbPut(store,item);}mosaicCache={};if(currentMode==='soup')await renderTableView();else await renderSanctuaryView();showToast("Import complete ✓");}catch(err){console.error(err);showToast("Import failed");}event.target.value='';}
 
 /* MOSAIC EXTRACT */
 async function extractMemory(){
@@ -808,8 +1031,8 @@ async function extractMemory(){
 async function confirmDeleteMosaic(){if(!currentDiscourseId)return;if(!confirm("Clear mosaic anchors?"))return;await deleteMosaicTile(currentDiscourseId);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic cleared");}
 
 /* AKASHIC */
-async function backupToAkashic(){try{const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:await dbGetAll("cosm_folders"),cosm_discourses:await dbGetAll("cosm_discourses"),cosm_mosaic_tiles:await dbGetAll("cosm_mosaic_tiles"),cosm_backlinks:await dbGetAll("cosm_backlinks")};const res=await fetch(`${AKASHIC_URL}/backup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:cosmUserId,data:JSON.stringify(payload)})});if(res.ok)showToast('Akashic Synced ◈');}catch(e){console.error(e);}}
-async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will overwrite local fragments."))return;try{const res=await fetch(`${AKASHIC_URL}/backup/latest?user_id=${cosmUserId}`);if(!res.ok)throw new Error('No backup');const payload=JSON.parse(await res.text());const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store])){const all=await dbGetAll(store);for(const item of all)await dbDelete(store,item.id);for(const item of payload[store])await dbPut(store,item);}}showToast('Sanctuary Restored ◈');setTimeout(()=>location.reload(),1200);}catch(e){console.error(e);showToast('Akashic offline');}}
+async function backupToAkashic(){try{const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:await dbGetAll("cosm_folders"),cosm_discourses:await dbGetAll("cosm_discourses"),cosm_mosaic_tiles:await dbGetAll("cosm_mosaic_tiles"),cosm_backlinks:await dbGetAll("cosm_backlinks"),characters:await dbGetAll("characters"),history:await dbGetAll("history"),summaries:await dbGetAll("summaries")};const res=await fetch(`${AKASHIC_URL}/backup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:cosmUserId,data:JSON.stringify(payload)})});if(res.ok)showToast('Akashic Synced ◈');}catch(e){console.error(e);}}
+async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will overwrite local fragments."))return;try{const res=await fetch(`${AKASHIC_URL}/backup/latest?user_id=${cosmUserId}`);if(!res.ok)throw new Error('No backup');const payload=JSON.parse(await res.text());const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store])){const all=await dbGetAll(store);for(const item of all)await dbDelete(store,item.id);for(const item of payload[store])await dbPut(store,item);}}showToast('Sanctuary Restored ◈');setTimeout(()=>location.reload(),1200);}catch(e){console.error(e);showToast('Akashic offline');}}
 
 /* LONG PRESS */
 function startLP(e,card,item){const touch=e.touches?e.touches[0]:e;touchStartPos={x:touch.clientX,y:touch.clientY};isLongPress=false;longPressConsumed=false;card.classList.add('long-pressing');longPressTimer=setTimeout(()=>{isLongPress=true;longPressConsumed=true;card.classList.remove('long-pressing');mgmtItem=item;openManagementModal(item);},LONG_PRESS_DURATION);}
@@ -861,8 +1084,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('capture-title').addEventListener('input',function(){this.dataset.userEdited='true';});
   document.getElementById('btn-settings-cancel').addEventListener('click',closeOverlay);
   document.getElementById('btn-settings-confirm').addEventListener('click',()=>{const k=document.getElementById('input-api-key').value,m=document.getElementById('input-model').value;localStorage.setItem('nexus_v7_key',k);localStorage.setItem('nq_api_key',k);localStorage.setItem('activeModel_v1',m);localStorage.setItem('nq_model',m);closeOverlay();showToast("Settings Anchored");});
+
+  document.getElementById('btn-new-character').addEventListener('click',handleNewCharacter);
+  document.getElementById('search-input-sanctuary').addEventListener('input',e=>{sanctuarySearchQuery=e.target.value.toLowerCase();renderSanctuaryView();});
+  document.getElementById('btn-forge-save').addEventListener('click',saveCharacterForge);
+  document.getElementById('btn-forge-close').addEventListener('click',closeCharacterForge);
+  document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
+  document.querySelectorAll('.forge-section-header').forEach(h=>{h.addEventListener('click',()=>{h.parentElement.classList.toggle('open');});});
+
   const fmtMap={'fmt-bold':{wrap:['**','**']},'fmt-italic':{wrap:['*','*']},'fmt-underline':{wrap:['<u>','</u>']},'fmt-quote':{line:'> '},'fmt-code':{wrap:['`','`']},'fmt-codeblock':{block:'```\n',end:'\n```'},'fmt-divider-line':{insert:'\n---\n'},'fmt-bullet':{line:'- '},'fmt-numbered':{line:'1. '},'fmt-h1':{line:'# '},'fmt-h2':{line:'## '},'fmt-h3':{line:'### '}};
-  Object.entries(fmtMap).forEach(([id,cfg])=>{const btn=document.getElementById(id);if(btn)btn.addEventListener('click',()=>applyFormat(cfg));});
+
   document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goToTable();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
 });
 
