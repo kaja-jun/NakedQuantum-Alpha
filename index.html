@@ -47,7 +47,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 
 .soup-view { background: transparent; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-.breadcrumb-bar { display: flex; align-items: center; padding: 14px 16px 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; scrollbar-width: none; }
+.breadcrumb-bar { display: flex; align-items: center; padding: 18px 24px 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; scrollbar-width: none; }
 .breadcrumb-bar::-webkit-scrollbar { display: none; }
 .breadcrumb-seg { display: flex; align-items: center; flex-shrink: 0; }
 .breadcrumb-btn { background: none; border: none; color: var(--muted); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; padding: 4px 6px; border-radius: 6px; white-space: nowrap; }
@@ -55,17 +55,17 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .breadcrumb-btn.current { color: var(--accent); opacity: 0.9; }
 .breadcrumb-arrow { color: var(--muted); font-size: 10px; opacity: 0.5; padding: 0 2px; user-select: none; }
 
-.table-action-bar { display: flex; gap: 10px; padding: 10px 16px 14px; flex-shrink: 0; }
+.table-action-bar { display: none; gap: 10px; padding: 10px 16px 14px; flex-shrink: 0; }
 .btn-table-action { display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--accent); border: 1px solid var(--border); color: #000; font-size: 12px; letter-spacing: 1px; font-weight: 700; padding: 10px 16px; border-radius: 10px; white-space: nowrap; flex: 1; }
 .btn-table-action:active { background: var(--accent-dim); color: #000; border-color: var(--accent); }
 
-.cards-section-label { font-size: 9px; letter-spacing: 3px; color: var(--accent); opacity: 0.45; font-weight: 900; text-transform: uppercase; padding: 14px 0 8px; }
-.cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cards-section-label { font-size: 9px; letter-spacing: 3px; color: var(--accent); opacity: 0.45; font-weight: 900; text-transform: uppercase; padding: 14px 24px 8px; }
+.cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 24px; }
 @media (min-width: 540px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
 .card:last-child:nth-child(odd) { grid-column: span 2; }
 .folder-card, .discourse-card { user-select: none; -webkit-user-select: none; }
 
-.folder-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 14px 12px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.18s, background 0.18s; min-height: 90px; display: flex; flex-direction: column; justify-content: space-between; }
+.folder-card { background: var(--surface); border: none; border-radius: 14px; padding: 18px; cursor: pointer; position: relative; overflow: hidden; transition: transform 0.2s; min-height: 100px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 .folder-card.long-pressing { background: var(--surface2); border-color: var(--accent); transform: scale(0.98); }
 .folder-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent-dim), transparent); opacity: 0.4; }
 .folder-card:active { border-color: var(--accent); background: var(--surface2); }
@@ -74,7 +74,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .folder-card-name { font-size: 13px; font-weight: 700; color: var(--text); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.2px; }
 .folder-card-meta { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; margin-top: 3px; }
 
-.discourse-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.18s, background 0.18s; min-height: 110px; display: flex; flex-direction: column; gap: 6px; }
+.discourse-card { background: var(--surface); border: none; border-radius: 14px; padding: 18px; cursor: pointer; position: relative; overflow: hidden; transition: transform 0.2s; min-height: 120px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 .discourse-card.long-pressing { background: var(--surface2); border-color: var(--accent); transform: scale(0.98); }
 .discourse-card::after { content: ''; position: absolute; bottom: -3px; left: 4px; right: 4px; height: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; z-index: -1; opacity: 0.7; }
 .discourse-card::before { content: ''; position: absolute; bottom: -6px; left: 8px; right: 8px; height: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; z-index: -2; opacity: 0.5; }
@@ -87,9 +87,9 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .badge-mosaic { font-size: 11px; color: var(--accent); opacity: 0.7; }
 .badge-pinned { font-size: 9px; color: var(--accent-dim); opacity: 0.6; letter-spacing: 0.5px; }
 
-.table-surface { flex: 1; padding: 0 16px 100px; }
-.search-bar-wrap { padding: 8px 16px 4px; flex-shrink: 0; }
-.search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 9px 14px; border-radius: 10px; font-size: 14px; outline: none; caret-color: var(--accent); }
+.table-surface { flex: 1; padding: 0 0 100px; }
+.search-bar-wrap { padding: 8px 24px 4px; flex-shrink: 0; }
+.search-input { width: 100%; background: var(--surface2); border: none; color: var(--text); padding: 12px 18px; border-radius: 12px; font-size: 15px; outline: none; caret-color: var(--accent); }
 .search-input:focus { border-color: var(--accent-dim); }
 .search-input::placeholder { color: var(--muted); opacity: 0.6; }
 
@@ -255,7 +255,18 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 @media (max-width: 480px) { .lighthouse-tools { gap: 4px; } .tbtn { padding: 7px 8px; font-size: 10px; } .view-toggle-btn { padding: 6px 9px; } .cards-grid { gap: 8px; } .lighthouse-scroll { padding: 20px 14px 60px; } }
-</style>
+
+	.chat-msg-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-dim); flex-shrink: 0; cursor: pointer; }
+	.char-card-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); margin-right: 12px; cursor: pointer; }
+	.image-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+	.image-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 12px; border: 2px solid var(--accent); }
+	.voice-marker { color: var(--accent); font-style: italic; opacity: 0.8; }
+	.msg-copy-btn { position: absolute; top: 4px; right: 4px; background: none; border: none; color: var(--muted); font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+	.chat-msg:hover .msg-copy-btn { opacity: 1; }
+	.chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+	.chat-msg-content { flex: 1; min-width: 0; }
+
+	</style>
 </head>
 <body>
 <canvas id="firefly-canvas"></canvas>
@@ -364,8 +375,20 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
               <input class="cosm-input" id="forge-role" placeholder="The Lone Wanderer...">
             </div>
             <div class="forge-input-group">
+              <span class="forge-label">Avatar URL</span>
+              <input class="cosm-input" id="forge-avatar" placeholder="https://image.url/avatar.jpg">
+            </div>
+            <div class="forge-input-group">
               <span class="forge-label">Backstory</span>
               <textarea class="forge-textarea" id="forge-backstory" placeholder="Origins and history..."></textarea>
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Summary (Dual-Box)</span>
+              <textarea class="forge-textarea" id="forge-summary" placeholder="Current status/context..."></textarea>
+            </div>
+            <div class="forge-input-group">
+              <span class="forge-label">Memory (Dual-Box)</span>
+              <textarea class="forge-textarea" id="forge-memory" placeholder="Long-term facts and lore..."></textarea>
             </div>
           </div>
         </div>
@@ -532,6 +555,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 </div>
 
 <div id="cosm-toast"></div>
+<div class="image-overlay" id="image-overlay" onclick="this.style.display='none'"><img id="overlay-img" src=""></div>
 
 <script>
 document.addEventListener('touchstart',()=>{},{passive:true});
@@ -590,7 +614,7 @@ async function restoreDiscourse(id){const d=await getDiscourse(id);if(!d)return;
 /* CHARACTERS */
 const getCharacters=()=>dbGetAll("characters");
 const getCharacter=id=>dbGet("characters",id);
-async function createCharacter(data={}){const id="c_"+Date.now(),now=Date.now(),char={id,name:"New Character",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1,created_at:now,updated_at:now,...data};await dbPut("characters",char);return char;}
+async function createCharacter(data={}){const id="c_"+Date.now(),now=Date.now(),char={id,name:"New Character",role:"",backstory:"",avatar_url:"",summary:"",memory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1,created_at:now,updated_at:now,...data};await dbPut("characters",char);return char;}
 async function updateCharacter(id,updates){const char=await getCharacter(id);if(!char)return;const u={...char,...updates,updated_at:Date.now()};await dbPut("characters",u);return u;}
 async function deleteCharacter(id){const c=await getCharacter(id);if(!c)return;await dbPut("characters",{...c,isDeleted:true,deleted_at:Date.now()});}
 const purgeCharacter=id=>dbDelete("characters",id);
@@ -632,9 +656,9 @@ function showPanel(id){
   });
   const active=document.getElementById(id);
   if(active)active.classList.remove('hidden');
-  currentView=id.replace('view-','');
+  currentView=id.replace('view-',''); updateFabMenu(currentMode);
   const fab=document.getElementById('fab-container');
-  if(fab)fab.style.display=(id==='view-soup'||id==='view-sanctuary')?'flex':'none';
+  if(fab)fab.style.display=(id==='view-forge')?'none':'flex';
   firefly.sd(id==='view-lighthouse'||id==='view-chat'?80:20);
 }
 
@@ -652,10 +676,35 @@ function updateHeaderButtons(){
 /* FAB MENU */
 function updateFabMenu(mode){
   const menu=document.getElementById('fab-menu');
+  if(!menu) return;
   let html = '';
-  if(mode==='soup'){
-    html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡Quick Capture</button>`;
-  } else {
+  if(currentView==='soup'){
+    html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡ Quick Capture</button>`;
+  } else if(currentView==='sanctuary'){
+    html=`<button class="fab-item" id="fab-new-char">◈ New Character</button><button class="fab-item" id="fab-open-forge">⚒ Character Forge</button>`;
+  } else if(currentView==='chat'){
+    html=`<button class="fab-item" id="fab-send-to-soup">♨ Send to Soup</button><button class="fab-item" id="fab-world-narrator">◯ World Narrator</button><button class="fab-item" id="fab-chat-clear">✕ Clear Chat</button>`;
+  } else if(currentView==='lighthouse'){
+    html=`<button class="fab-item" id="fab-extract">◈ Extract Mosaic</button><button class="fab-item" id="fab-export-md">↓ Export Markdown</button><button class="fab-item" id="fab-export-pdf">↓ Export PDF</button>`;
+  }
+  html += `<button class="fab-item" id="fab-settings">⚙ Settings</button>`;
+  menu.innerHTML = html;
+  
+  if(document.getElementById('fab-new-folder')) document.getElementById('fab-new-folder').onclick=()=>{closeFab();openFolderModal();};
+  if(document.getElementById('fab-new-discourse-fab')) document.getElementById('fab-new-discourse-fab').onclick=()=>{closeFab();handleNewDiscourse();};
+  if(document.getElementById('fab-quick-capture')) document.getElementById('fab-quick-capture').onclick=()=>{closeFab();openQuickCapture();};
+  if(document.getElementById('fab-new-char')) document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
+  if(document.getElementById('fab-open-forge')) document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
+  if(document.getElementById('fab-send-to-soup')) document.getElementById('fab-send-to-soup').onclick=()=>{closeFab();sendChatToSoup();};
+  if(document.getElementById('fab-world-narrator')) document.getElementById('fab-world-narrator').onclick=()=>{closeFab();handleWorldNarrator();};
+  if(document.getElementById('fab-chat-clear')) document.getElementById('fab-chat-clear').onclick=()=>{closeFab();clearChatHistory();};
+  if(document.getElementById('fab-extract')) document.getElementById('fab-extract').onclick=()=>{closeFab();extractMemory();};
+  if(document.getElementById('fab-export-md')) document.getElementById('fab-export-md').onclick=()=>{closeFab();exportMarkdown();};
+  if(document.getElementById('fab-export-pdf')) document.getElementById('fab-export-pdf').onclick=()=>{closeFab();exportPDF();};
+  
+  const fs = document.getElementById('fab-settings');
+  if(fs) fs.onclick=()=>{closeFab();openSettingsModal();};
+} else {
     html=`<button class="fab-item" id="fab-new-char">◈ New Character</button><button class="fab-item" id="fab-open-forge">⚒ Character Forge</button>`;
   }
   html += `<button class="fab-item" id="fab-settings">⚙ Settings</button>`;
@@ -674,6 +723,11 @@ function updateFabMenu(mode){
 
 async function goBack(){
   if(currentView==='lighthouse' && currentDiscourseId) await saveCurrentDiscourse(true);
+  if(currentView==='forge') { showPanel('view-sanctuary'); renderSanctuaryView(); return; }
+  if(currentView==='chat') { showPanel('view-sanctuary'); renderSanctuaryView(); return; }
+  if(currentView==='void') { showPanel(currentMode==='soup'?'view-soup':'view-sanctuary'); if(currentMode==='soup')renderTableView(); else renderSanctuaryView(); return; }
+  if(currentView==='lighthouse') { showPanel('view-soup'); renderTableView(); return; }
+  
   if(currentMode==='soup') { showPanel('view-soup'); renderTableView(); }
   else { showPanel('view-sanctuary'); renderSanctuaryView(); }
 }
@@ -767,7 +821,27 @@ async function openDiscourse(id){
   document.getElementById("content-textarea").value=disc.raw_text||"";
   await renderMeta(disc);await renderMosaicDisplay(id);
   setEditorMode('write');showPanel('view-lighthouse');
-  if(disc.folder_id&&currentFolderId!==disc.folder_id){const f=await dbGet("cosm_folders",disc.folder_id);if(f){breadcrumbPath=[{id:null,name:'◈ root'},{id:disc.folder_id,name:f.name}];currentFolderId=disc.folder_id;}}
+  
+  if(disc.folder_id){
+    const fullPath = [];
+    let fid = disc.folder_id;
+    const allFolders = await getFolders();
+    while(fid){
+      const f = allFolders.find(x => x.id === fid);
+      if(f){
+        fullPath.unshift({id: f.id, name: f.name});
+        fid = f.parent_id;
+      } else {
+        fid = null;
+      }
+    }
+    breadcrumbPath = [{id:null, name:'◈ root'}, ...fullPath];
+    currentFolderId = disc.folder_id;
+  } else {
+    breadcrumbPath = [{id:null, name:'◈ root'}];
+    currentFolderId = null;
+  }
+
 }
 
 async function renderMeta(disc){
@@ -829,8 +903,10 @@ async function renderSanctuaryView(){
   const l=document.createElement('div');l.className='cards-section-label';l.textContent='Characters';surface.appendChild(l);
   const g=document.createElement('div');g.className='cards-grid';
   for(const c of filtered){
-    const card=document.createElement('div');card.className='character-card card';
-    card.innerHTML=`<div><div class="char-card-name">${escHtml(c.name)}</div><div class="char-card-role">${escHtml(c.role||'No role assigned')}</div></div><div class="char-card-footer"><div class="char-card-meta">${new Date(c.updated_at).toLocaleDateString()}</div></div>`;
+    
+        const card=document.createElement('div');card.className='character-card card';
+    let avatarHtml = c.avatar_url ? `<img src="${c.avatar_url}" class="char-card-avatar" onclick="event.stopPropagation();enlargeImage('${c.avatar_url}')">` : '';
+    card.innerHTML=`<div style="display:flex;align-items:center;">${avatarHtml}<div><div class="char-card-name">${escHtml(c.name)}</div><div class="char-card-role">${escHtml(c.role||'No role assigned')}</div></div></div><div class="char-card-footer"><div class="char-card-meta">${new Date(c.updated_at).toLocaleDateString()}</div></div>`;
     card.addEventListener('click',()=>{if(!longPressConsumed)openChat(c.id);});
     card.addEventListener('mousedown',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}));
     card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
@@ -846,9 +922,12 @@ async function handleNewCharacter(){const c=await createCharacter();openCharacte
 
 async function openCharacterForge(id){
   activeCharId=id||null;
-  const c=id?await getCharacter(id):{name:"",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1};
+  const c=id?await getCharacter(id):{name:"",role:"",backstory:"",avatar_url:"",summary:"",memory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1};
   document.getElementById('forge-name').value=c.name||"";
   document.getElementById('forge-role').value=c.role||"";
+  document.getElementById('forge-avatar').value=c.avatar_url||"";
+  document.getElementById('forge-summary').value=c.summary||"";
+  document.getElementById('forge-memory').value=c.memory||"";
   document.getElementById('forge-backstory').value=c.backstory||"";
   document.getElementById('forge-personality').value=c.personality||"";
   document.getElementById('forge-lorebook').value=c.lorebook||"";
@@ -865,6 +944,9 @@ async function saveCharacterForge(){
   const data={
     name:document.getElementById('forge-name').value.trim()||"Unnamed Soul",
     role:document.getElementById('forge-role').value.trim(),
+    avatar_url:document.getElementById('forge-avatar').value.trim(),
+    summary:document.getElementById('forge-summary').value.trim(),
+    memory:document.getElementById('forge-memory').value.trim(),
     backstory:document.getElementById('forge-backstory').value,
     personality:document.getElementById('forge-personality').value,
     lorebook:document.getElementById('forge-lorebook').value,
@@ -921,11 +1003,62 @@ async function callAIForChat(char,history,text){
   }catch(err){console.error(err);showToast("AI call failed");return null;}
 }
 
-function appendChatMessage(role,text){
-  const c=document.getElementById('chat-messages');const m=document.createElement('div');m.className=`chat-msg ${role==='user'?'user':'char'}`;m.textContent=text;c.appendChild(m);c.scrollTop=c.scrollHeight;
+async function appendChatMessage(role,text){
+  const c=document.getElementById('chat-messages');const m=document.createElement('div');
+  m.className=`chat-msg ${role==='user'?'user':'char'}`;
+  const char = activeCharId ? await getCharacter(activeCharId) : null;
+  const avatarUrl = (role === 'char' && char) ? char.avatar_url : null;
+  
+  let processedText = text.replace(/\(([^)]+)\)/g, '<span class="voice-marker">($1)</span>');
+  
+  let avatarHtml = '';
+  if(role === 'char' && avatarUrl) {
+    avatarHtml = `<img src="${avatarUrl}" class="chat-msg-avatar" onclick="enlargeImage('${avatarUrl}')">`;
+  }
+  
+  m.innerHTML = `${avatarHtml}<div class="chat-msg-content">${processedText}</div><button class="msg-copy-btn" onclick="copyToClipboard(this, \`${text.replace(/`/g, '\`')}\`)">Copy</button>`;
+  c.appendChild(m);c.scrollTop=c.scrollHeight;
+}
+
+function enlargeImage(url) {
+  const overlay = document.getElementById('image-overlay');
+  const img = document.getElementById('overlay-img');
+  img.src = url;
+  overlay.style.display = 'flex';
+}
+
+function copyToClipboard(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const old = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = old, 2000);
+  });
+}`;m.textContent=text;c.appendChild(m);c.scrollTop=c.scrollHeight;
 }
 
 async function clearChatHistory(){if(!activeCharId||!confirm("Clear chat history?"))return;const h=await dbGetByIndex('history','charId',activeCharId);for(const x of h)await dbDelete('history',x.id);document.getElementById('chat-messages').innerHTML='';showToast("History cleared");}
+
+
+async function sendChatToSoup(){
+  if(!activeCharId) return;
+  const char = await getCharacter(activeCharId);
+  const history = await dbGetByIndex('history', 'charId', activeCharId);
+  if(!history.length) { showToast("No history to send"); return; }
+  
+  let text = history.map(h => `${h.role === 'user' ? 'User' : char.name}: ${h.content}`).join('\n\n');
+  const disc = await createDiscourse({
+    title: `Chat with ${char.name} - ${new Date().toLocaleDateString()}`,
+    raw_text: text,
+    folder_id: null
+  });
+  showToast("Sent to Soup!");
+}
+
+async function handleWorldNarrator(){
+  const input = document.getElementById('chat-input');
+  input.value = "(Describe the current scene and environment in detail)";
+  handleChatSend();
+}
 
 /* VOID */
 
@@ -1088,7 +1221,18 @@ function renderContent(raw){
 
 /* EXPORTS */
 async function exportMarkdown(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported as Markdown");}
-async function exportPDF(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let mh="";if(tile&&tile.anchors&&tile.anchors.length)mh=`<div style="border-left:3px solid #c8a050;padding:10px 16px;margin:16px 0;background:#f9f5ee;"><div style="font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:8px;color:#8a6e35;">◈ MOSAIC</div>${tile.anchors.map(a=>`<div style="margin:4px 0;">• ${escHtml(a)}</div>`).join('')}</div>`;const content=renderContent(d.raw_text||"");const fh=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(d.title||"Discourse")}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:0 auto;padding:20px;color:#1a1a1a;line-height:1.8;}h1{font-size:26px;border-bottom:1px solid #ddd;padding-bottom:10px;margin-bottom:6px;}.meta{font-size:12px;color:#888;margin-bottom:24px;}h2{font-size:20px;}h3{font-size:16px;color:#555;}pre{background:#f4f4f4;padding:14px;border-radius:6px;overflow-x:auto;}code{font-family:monospace;font-size:13px;}blockquote{border-left:3px solid #ccc;padding-left:14px;color:#666;font-style:italic;margin:12px 0;}</style></head><body><h1>${escHtml(d.title||"Untitled")}</h1><div class="meta">${new Date(d.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</div>${mh}${content}</body></html>`;const iframe=document.createElement('iframe');iframe.style.cssText='position:absolute;width:0;height:0;border:none;';document.body.appendChild(iframe);const doc=iframe.contentWindow.document;doc.open();doc.write(fh);doc.close();setTimeout(()=>{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(()=>document.body.removeChild(iframe),10000);},500);}
+async function exportPDF(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let mh="";if(tile&&tile.anchors&&tile.anchors.length)mh=`<div style="border-left:3px solid #c8a050;padding:10px 16px;margin:16px 0;background:#f9f5ee;"><div style="font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:8px;color:#8a6e35;">◈ MOSAIC</div>${tile.anchors.map(a=>`<div style="margin:4px 0;">• ${escHtml(a)}</div>`).join('')}</div>`;const content=renderContent(d.raw_text||"");const fh=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(d.title||"Discourse")}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:0 auto;padding:20px;color:#1a1a1a;line-height:1.8;}h1{font-size:26px;border-bottom:1px solid #ddd;padding-bottom:10px;margin-bottom:6px;}.meta{font-size:12px;color:#888;margin-bottom:24px;}h2{font-size:20px;}h3{font-size:16px;color:#555;}pre{background:#f4f4f4;padding:14px;border-radius:6px;overflow-x:auto;}code{font-family:monospace;font-size:13px;}blockquote{border-left:3px solid #ccc;padding-left:14px;color:#666;font-style:italic;margin:12px 0;}
+	.chat-msg-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-dim); flex-shrink: 0; cursor: pointer; }
+	.char-card-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); margin-right: 12px; cursor: pointer; }
+	.image-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+	.image-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 12px; border: 2px solid var(--accent); }
+	.voice-marker { color: var(--accent); font-style: italic; opacity: 0.8; }
+	.msg-copy-btn { position: absolute; top: 4px; right: 4px; background: none; border: none; color: var(--muted); font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+	.chat-msg:hover .msg-copy-btn { opacity: 1; }
+	.chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+	.chat-msg-content { flex: 1; min-width: 0; }
+
+	</style></head><body><h1>${escHtml(d.title||"Untitled")}</h1><div class="meta">${new Date(d.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</div>${mh}${content}</body></html>`;const iframe=document.createElement('iframe');iframe.style.cssText='position:absolute;width:0;height:0;border:none;';document.body.appendChild(iframe);const doc=iframe.contentWindow.document;doc.open();doc.write(fh);doc.close();setTimeout(()=>{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(()=>document.body.removeChild(iframe),10000);},500);}
 async function exportDiscourseMarkdown(id){const d=await getDiscourse(id);if(!d)return;const tile=await getMosaicTile(id);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported");}
 async function exportFolderContents(fId){const discs=(await dbGetByIndex("cosm_discourses","folder_id",fId)).filter(d=>!d.isDeleted);if(!discs.length){showToast("No discourses to export");return;}let md=`# Folder Export\n\n`;for(const d of discs){const t=await getMosaicTile(d.id);md+=`## ${d.title}\n\n`;if(t&&t.anchors&&t.anchors.length)md+=`> **Mosaic**\n${t.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";md+=`\n\n---\n\n`;}const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`folder_export_${new Date().toISOString().slice(0,10)}.md`;a.click();URL.revokeObjectURL(url);showToast(`Exported ${discs.length} discourse(s)`);}
 async function exportJSON(){const f=await dbGetAll("cosm_folders"),d=await dbGetAll("cosm_discourses"),m=await dbGetAll("cosm_mosaic_tiles"),b=await dbGetAll("cosm_backlinks"),c=await dbGetAll("characters"),h=await dbGetAll("history"),s=await dbGetAll("summaries");const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:f,cosm_discourses:d,cosm_mosaic_tiles:m,cosm_backlinks:b,characters:c,history:h,summaries:s};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`NQ_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("Backup exported ✓");}
