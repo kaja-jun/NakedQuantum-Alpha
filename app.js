@@ -11,6 +11,7 @@ let db = null;
 let currentMode = 'soup';
 let currentFolderId = null;
 let currentDiscourseId = null;
+let longPressTimer = null;
 let breadcrumbPath = [{ id: null, name: '◈ Root' }];
 let mgmtId = null;
 
@@ -42,16 +43,15 @@ function escHtml(str) {
 class FireflyManager {
   constructor() {
     this.canvas = document.getElementById('firefly-canvas');
-    if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d');
     this.particles = [];
-    this.density = 10;
+    this.density = 20;
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this.animate();
   }
   resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
-  setDensity(len) { this.density = Math.min(150, 10 + Math.floor(len / 100)); }
+  setDensity(len) { this.density = Math.min(200, 15 + Math.floor(len / 50)); }
   animate() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     while (this.particles.length < this.density) {
