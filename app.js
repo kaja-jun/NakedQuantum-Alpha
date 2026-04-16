@@ -14,24 +14,39 @@ let currentDiscourseId = null;
 let mgmtId = null;
 let breadcrumbPath = [{ id: null, name: '◈ Root' }];
 
-/* --- 2. FIREFLY ENGINE --- */
+/* --- 2. UTILS & HAPTICS --- */
+function haptic(type = 'light') {
+  try { if ('vibrate' in navigator) navigator.vibrate(type === 'heavy' ? 40 : 15); } catch (e) {}
+}
+
+const showToast = (msg) => {
+  const t = document.getElementById('nq-toast');
+  if(!t) return;
+  t.textContent = msg; t.style.opacity = "1";
+  clearTimeout(t._timer); t._timer = setTimeout(() => { t.style.opacity = "0"; }, 2000);
+};
+
+function escHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+/* --- 3. FIREFLY ENGINE --- */
 class FireflyManager {
   constructor() {
     this.canvas = document.getElementById('firefly-canvas');
     if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d');
     this.particles = [];
-    this.density = 20;
+    this.density = 10;
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this.animate();
   }
-  resize() { 
-    this.canvas.width = window.innerWidth; 
-    this.canvas.height = window.innerHeight; 
-  }
+  resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
   setDensity(len) { 
-    this.density = Math.min(100, 15 + Math.floor((len || 0) / 200)); 
+    // Sparse gold fireflies: Min 5, Max 60
+    this.density = Math.min(60, 5 + Math.floor((len || 0) / 300)); 
   }
   animate() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -56,7 +71,7 @@ class FireflyManager {
 }
 const fireflyManager = new FireflyManager();
 
-/* --- 3. DATABASE (VER 4) --- */
+/* --- 4. DATABASE (VERSION 4) --- */
 async function initDB() {
   return new Promise((resolve) => {
     const req = indexedDB.open("NakedQuantumDB", 4);
@@ -82,29 +97,27 @@ const dbCall = (store, method, ...args) => new Promise(r => {
   req.onerror = () => r(null);
 });
 
-/* --- 4. NAVIGATION & MODES --- */
-const showToast = (msg) => {
-  const t = document.getElementById('nq-toast');
-  if(!t) return;
-  t.textContent = msg; t.style.opacity = "1";
-  clearTimeout(t._timer); t._timer = setTimeout(() => { t.style.opacity = "0"; }, 2000);
-};
+/* --- 5. VIEW & MODE LOGIC --- */
+async function refresh() {
+  if (currentMode === 'soup') await renderSoup();
+}
 
 function switchView(viewId) {
   ['view-soup', 'view-sanctuary', 'view-void'].forEach(id => {
-    document.getElementById(id).classList.add('hidden');
+    const el = document.getElementById(id);
+    if(el) el.classList.add('hidden');
   });
-  document.getElementById(viewId).classList.remove('hidden');
+  const activeView = document.getElementById(viewId);
+  if(activeView) activeView.classList.remove('hidden');
   document.getElementById('fab-container').style.display = (viewId === 'view-soup') ? 'flex' : 'none';
 }
 
-/* --- 5. THE SOUP (LISTING) --- */
+/* --- 6. THE SOUP (RENDERER) --- */
 async function renderSoup() {
   const container = document.getElementById('soup-content');
   const breadcrumbs = document.getElementById('soup-breadcrumbs');
   if (!container || !breadcrumbs) return;
 
-  // Breadcrumbs
   breadcrumbs.innerHTML = '';
   breadcrumbPath.forEach((seg, idx) => {
     const btn = document.createElement('span');
@@ -113,7 +126,7 @@ async function renderSoup() {
     btn.onclick = () => {
       breadcrumbPath = breadcrumbPath.slice(0, idx + 1);
       currentFolderId = breadcrumbPath[breadcrumbPath.length - 1].id;
-      renderSoup();
+      refresh();
     };
     breadcrumbs.appendChild(btn);
     if (idx < breadcrumbPath.length - 1) {
@@ -135,13 +148,13 @@ async function renderSoup() {
   let totalLen = 0;
 
   if (folders.length > 0) {
-    container.innerHTML += `<div class="section-label">Folders</div><div class="cards-grid" id="folder-grid"></div>`;
+    container.innerHTML += `<div class="section-label" style="padding:0 16px 8px;">Folders</div><div class="cards-grid" id="folder-grid" style="padding:0 16px;"></div>`;
     const grid = document.getElementById('folder-grid');
     folders.forEach(f => grid.appendChild(createCard('folder-card', '◈', f.name, 'Folder', f.id, 'folder')));
   }
 
   if (fragments.length > 0) {
-    container.innerHTML += `<div class="section-label">Fragments</div><div class="cards-grid" id="frag-grid"></div>`;
+    container.innerHTML += `<div class="section-label" style="padding:14px 16px 8px;">Fragments</div><div class="cards-grid" id="frag-grid" style="padding:0 16px;"></div>`;
     const grid = document.getElementById('frag-grid');
     fragments.forEach(d => {
       totalLen += (d.raw_text || "").length;
@@ -150,7 +163,7 @@ async function renderSoup() {
   }
 
   if (sparks.length > 0) {
-    container.innerHTML += `<div class="section-label" style="color:#a0d8a0;">Sparks</div><div class="cards-grid" id="spark-grid"></div>`;
+    container.innerHTML += `<div class="section-label" style="color:#a0d8a0; padding:14px 16px 8px;">Sparks</div><div class="cards-grid" id="spark-grid" style="padding:0 16px 100px;"></div>`;
     const grid = document.getElementById('spark-grid');
     sparks.forEach(s => {
       totalLen += (s.raw_text || "").length;
@@ -164,24 +177,23 @@ async function renderSoup() {
   fireflyManager.setDensity(totalLen);
 }
 
-/* --- 6. ATOMIC INTERACTION LOGIC --- */
+/* --- 7. ATOMIC INTERACTION LOGIC (Click vs Long Press) --- */
+let longPressFired = false;
 function createCard(className, icon, title, meta, id, type) {
   const card = document.createElement('div');
   card.className = className;
   card.innerHTML = `<div class="card-icon">${icon}</div><div class="card-name">${escHtml(title)}</div><div class="card-meta">${meta}</div>`;
   
   let timer = null;
-  let isLongPress = false;
-
   card.oncontextmenu = (e) => { e.preventDefault(); return false; };
 
-  const start = () => {
-    isLongPress = false;
+  const start = (e) => {
+    longPressFired = false;
     card.classList.add('long-pressing');
     timer = setTimeout(() => {
-      isLongPress = true;
+      longPressFired = true;
       mgmtId = id; 
-      if ('vibrate' in navigator) navigator.vibrate(30);
+      haptic('heavy');
       card.classList.remove('long-pressing');
       openModal('modal-mgmt');
     }, 700);
@@ -190,14 +202,14 @@ function createCard(className, icon, title, meta, id, type) {
   const end = (e) => {
     clearTimeout(timer);
     card.classList.remove('long-pressing');
-    if (!isLongPress) {
+    if (!longPressFired) {
       if (type === 'folder') {
-        breadcrumbPath.push({ id, name: title }); currentFolderId = id; renderSoup();
+        breadcrumbPath.push({ id, name: title }); currentFolderId = id; refresh();
       } else {
         openLighthouse(id);
       }
     }
-    isLongPress = false;
+    longPressFired = false;
   };
 
   card.addEventListener('touchstart', start, { passive: true });
@@ -209,7 +221,7 @@ function createCard(className, icon, title, meta, id, type) {
   return card;
 }
 
-/* --- 7. MODALS & MANAGEMENT --- */
+/* --- 8. MODALS & MANAGEMENT --- */
 function closeModals() {
   document.getElementById('nq-overlay').classList.remove('active');
   document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
@@ -225,12 +237,13 @@ function openModal(id) {
 
 document.getElementById('nq-overlay').onclick = closeModals;
 
-// Management Actions
+// Manage Buttons
 document.getElementById('btn-mgmt-rename').onclick = async () => {
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
   const item = await dbCall(store, 'get', mgmtId);
   document.getElementById('input-rename').value = store === 'folders' ? item.name : item.title;
   openModal('modal-rename');
+  setTimeout(() => document.getElementById('input-rename').focus(), 120);
 };
 
 document.getElementById('btn-confirm-rename').onclick = async () => {
@@ -239,7 +252,7 @@ document.getElementById('btn-confirm-rename').onclick = async () => {
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
   const item = await dbCall(store, 'get', mgmtId);
   if (store === 'folders') item.name = name; else item.title = name;
-  await dbCall(store, 'put', item); closeModals(); renderSoup();
+  await dbCall(store, 'put', item); closeModals(); refresh();
 };
 
 document.getElementById('btn-mgmt-move').onclick = async () => {
@@ -257,28 +270,29 @@ document.getElementById('btn-confirm-move').onclick = async () => {
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
   const item = await dbCall(store, 'get', mgmtId);
   if (store === 'folders') item.parent_id = newParent; else item.folder_id = newParent;
-  await dbCall(store, 'put', item); closeModals(); renderSoup();
+  await dbCall(store, 'put', item); closeModals(); refresh();
 };
 
 document.getElementById('btn-mgmt-delete').onclick = async () => {
-  if(!confirm("Send to the Void?")) return;
   const store = mgmtId.startsWith('f_') ? 'folders' : 'discourses';
-  if (store === 'folders') await dbCall('folders', 'delete', mgmtId);
-  else {
+  if (store === 'folders') {
+    if(confirm("Purge folder permanently?")) await dbCall('folders', 'delete', mgmtId);
+  } else {
     const item = await dbCall('discourses', 'get', mgmtId);
     item.isDeleted = true; item.deleted_at = Date.now();
     await dbCall('discourses', 'put', item);
+    showToast("Sent to Void ◌");
   }
-  closeModals(); renderSoup();
+  closeModals(); refresh();
 };
 
-/* --- 8. THE SOUP TOOLS (VOID, SEARCH, SPARKS) --- */
+/* --- 9. SOUP TOOLS (VOID, SEARCH, JSON) --- */
 async function openVoid() {
   switchView('view-void');
   const surface = document.getElementById('void-surface');
   surface.innerHTML = '';
   const deleted = (await dbCall('discourses', 'getAll') || []).filter(d => d.isDeleted);
-  if (!deleted.length) { surface.innerHTML = '<div class="placeholder-center"><h1>◌</h1><p>The Void is empty.</p></div>'; return; }
+  if (!deleted.length) { surface.innerHTML = '<div class="placeholder-center"><h1>◌</h1><p>Void is empty.</p></div>'; return; }
   deleted.forEach(d => {
     const el = document.createElement('div'); el.className = 'soup-item';
     el.innerHTML = `<div class="soup-item-info"><div class="soup-item-name" style="text-decoration:line-through;opacity:0.5;">${escHtml(d.title)}</div></div>
@@ -288,9 +302,9 @@ async function openVoid() {
   });
 }
 
-document.getElementById('btn-close-void').onclick = () => { switchView('view-soup'); renderSoup(); };
+document.getElementById('btn-close-void').onclick = () => { switchView('view-soup'); refresh(); };
 window.restoreItem = async (id) => { const item = await dbCall('discourses', 'get', id); item.isDeleted = false; await dbCall('discourses', 'put', item); openVoid(); };
-window.purgeItem = async (id) => { if(confirm("Erase?")) { await dbCall('discourses', 'delete', id); openVoid(); } };
+window.purgeItem = async (id) => { if(confirm("Erase completely?")) { await dbCall('discourses', 'delete', id); openVoid(); } };
 
 // Search
 document.getElementById('input-search').oninput = async (e) => {
@@ -305,22 +319,21 @@ document.getElementById('input-search').oninput = async (e) => {
   ].join('');
 };
 
-/* --- 9. SPARKS & FAB --- */
+/* --- 10. SPARKS & FAB --- */
 document.getElementById('fab-main').onclick = () => {
   document.getElementById('fab-main').classList.toggle('open');
   document.getElementById('fab-menu').classList.toggle('open');
 };
 
-document.getElementById('btn-fab-folder').onclick = () => { openModal('modal-folder'); setTimeout(()=>document.getElementById('input-folder-name').focus(), 100); };
-
+document.getElementById('btn-fab-folder').onclick = () => { openModal('modal-folder'); setTimeout(()=>document.getElementById('input-folder-name').focus(), 120); };
 document.getElementById('btn-confirm-folder').onclick = async () => {
   const name = document.getElementById('input-folder-name').value.trim();
-  if(name) { await dbCall('folders', 'put', { id: 'f_'+Date.now(), name, parent_id: currentFolderId, updated_at: Date.now() }); closeModals(); renderSoup(); }
+  if(name) { await dbCall('folders', 'put', { id: 'f_'+Date.now(), name, parent_id: currentFolderId, updated_at: Date.now() }); closeModals(); refresh(); }
 };
 
 document.getElementById('btn-fab-spark').onclick = async () => {
   const sel = document.getElementById('spark-folder');
-  sel.innerHTML = '<option value="">◈ Current Folder</option>';
+  sel.innerHTML = '<option value="">◈ Current Folder</option><option value="__new__">+ New Folder...</option>';
   const folders = await dbCall('folders', 'getAll') || [];
   folders.forEach(f => { const opt = document.createElement('option'); opt.value = f.id; opt.textContent = f.name; sel.appendChild(opt); });
   document.getElementById('spark-title').value = ''; document.getElementById('spark-body').value = '';
@@ -328,15 +341,25 @@ document.getElementById('btn-fab-spark').onclick = async () => {
   setTimeout(()=>document.getElementById('spark-body').focus(), 120);
 };
 
+document.getElementById('spark-folder').onchange = (e) => {
+  document.getElementById('spark-new-folder-input').style.display = (e.target.value === '__new__') ? 'block' : 'none';
+};
+
 document.getElementById('btn-confirm-spark').onclick = async () => {
   const text = document.getElementById('spark-body').value.trim();
   if(!text) return;
   const title = document.getElementById('spark-title').value || text.split(/\s+/).slice(0,4).join(' ');
-  await dbCall('discourses', 'put', { id: 's_'+Date.now(), title, raw_text: text, folder_id: document.getElementById('spark-folder').value || currentFolderId, item_type: 'spark', updated_at: Date.now() });
-  closeModals(); renderSoup();
+  let targetFolder = document.getElementById('spark-folder').value || currentFolderId;
+  if(targetFolder === '__new__') {
+    const fName = document.getElementById('spark-new-folder-input').value.trim();
+    targetFolder = 'f_'+Date.now();
+    await dbCall('folders', 'put', { id: targetFolder, name: fName, parent_id: currentFolderId, updated_at: Date.now() });
+  }
+  await dbCall('discourses', 'put', { id: 's_'+Date.now(), title, raw_text: text, folder_id: targetFolder, item_type: 'spark', updated_at: Date.now() });
+  closeModals(); refresh(); showToast("Spark Captured ⚡");
 };
 
-/* --- 10. LIGHTHOUSE EDITOR --- */
+/* --- 11. LIGHTHOUSE EDITOR & PRECISE MATH --- */
 document.getElementById('btn-fab-frag').onclick = () => {
   currentDiscourseId = 'd_'+Date.now();
   document.getElementById('lh-title').value = ''; document.getElementById('lh-text').value = '';
@@ -360,14 +383,20 @@ document.getElementById('btn-lh-view').onclick = () => setLhMode('view');
 
 document.getElementById('btn-lh-back').onclick = async () => {
   if (currentDiscourseId) {
-    const title = document.getElementById('lh-title').value.trim() || 'Untitled';
-    const text = document.getElementById('lh-text').value;
-    await dbCall('discourses', 'put', { id: currentDiscourseId, title, raw_text: text, folder_id: currentFolderId, item_type: currentDiscourseId.startsWith('s_') ? 'spark' : 'fragment', updated_at: Date.now() });
+    const d = await dbCall('discourses', 'get', currentDiscourseId) || {};
+    await dbCall('discourses', 'put', {
+      ...d, id: currentDiscourseId,
+      title: document.getElementById('lh-title').value.trim() || 'Untitled',
+      raw_text: document.getElementById('lh-text').value,
+      folder_id: d.folder_id || currentFolderId,
+      item_type: d.item_type || 'fragment',
+      updated_at: Date.now()
+    });
   }
-  document.getElementById('lh-overlay').classList.remove('active'); renderSoup();
+  document.getElementById('lh-overlay').classList.remove('active'); refresh();
 };
 
-/* Formatting Toolbar Math */
+/* The Precise Cursor Math (Restored from cosmiOS) */
 document.querySelectorAll('.fmt-btn').forEach(btn => {
   btn.onclick = () => {
     const ta = document.getElementById('lh-text');
@@ -383,7 +412,10 @@ document.querySelectorAll('.fmt-btn').forEach(btn => {
     }
     else if (btn.dataset.line) { 
       const tag = btn.dataset.line; 
-      res = tag + selected; newPos = start + tag.length + selected.length; 
+      const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+      ta.value = val.slice(0, lineStart) + tag + val.slice(lineStart);
+      newPos = start + tag.length;
+      ta.focus(); ta.setSelectionRange(newPos, newPos); return;
     }
     else if (btn.dataset.insert) { res = btn.dataset.insert; newPos = start + res.length; }
     ta.value = val.slice(0, start) + res + val.slice(end);
@@ -401,7 +433,34 @@ function renderMarkdown(raw) {
             .replace(/\n/g, '<br>');
 }
 
-/* --- 11. BOOT SEQUENCE --- */
+/* --- 12. AKASHIC & JSON (SOVEREIGNTY) --- */
+async function syncAkashic() {
+  showToast("Akashic Sync Initiated...");
+  try {
+    const payload = { version: "NakedQuantum", exported_at: new Date().toISOString(), folders: await dbCall('folders', 'getAll'), discourses: await dbCall('discourses', 'getAll') };
+    const res = await fetch(`${AKASHIC_URL}/backup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: nqUserId, data: JSON.stringify(payload) }) });
+    if (res.ok) setTimeout(() => showToast("Akashic Synced ◈"), 800);
+  } catch (e) { showToast("Abyss Offline"); }
+}
+
+async function exportJSON() {
+  const payload = { version: "NakedQuantum", exported_at: new Date().toISOString(), folders: await dbCall('folders', 'getAll'), discourses: await dbCall('discourses', 'getAll') };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `NakedQuantum_Archive_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  showToast("Archive Exported ↓");
+}
+
+async function importJSON(event) {
+  const file = event.target.files[0]; if (!file) return;
+  if (!confirm("Merge data?")) return;
+  const payload = JSON.parse(await file.text());
+  if (payload.folders) for (const f of payload.folders) await dbCall('folders', 'put', f);
+  if (payload.discourses) for (const d of payload.discourses) await dbCall('discourses', 'put', d);
+  refresh(); showToast("Archive Imported ↑");
+}
+
+/* --- 13. BOOT SEQUENCE --- */
 const wordmark = document.getElementById('nq-wordmark');
 let wordmarkPressTimer = null;
 wordmark.addEventListener('touchstart', () => {
@@ -411,8 +470,11 @@ wordmark.addEventListener('touchstart', () => {
     currentMode = currentMode === 'soup' ? 'sanctuary' : 'soup';
     switchView(currentMode === 'soup' ? 'view-soup' : 'view-sanctuary');
     updateHeaderActions();
-    if (currentMode === 'soup') renderSoup();
-    if ('vibrate' in navigator) navigator.vibrate(40);
+    if (currentMode === 'soup') refresh();
+    haptic('heavy');
+    const t = document.getElementById('mode-toast');
+    t.textContent = currentMode === 'soup' ? '✦ The Soup' : '◈ The Sanctuary';
+    t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 1500);
   }, 600);
 }, { passive: true });
 wordmark.addEventListener('touchend', () => { wordmark.classList.remove('pressing'); clearTimeout(wordmarkPressTimer); });
@@ -420,9 +482,18 @@ wordmark.addEventListener('touchend', () => { wordmark.classList.remove('pressin
 function updateHeaderActions() {
   const container = document.getElementById('header-actions');
   if (currentMode === 'soup') {
-    container.innerHTML = `<button class="hdr-btn" id="btn-hdr-void">◌</button><button class="hdr-btn" id="btn-hdr-search">⌖</button><button class="hdr-btn" id="btn-hdr-sync">∞</button>`;
+    container.innerHTML = `
+      <button class="hdr-btn" id="btn-hdr-void" style="color:#ff6060;">◌</button>
+      <button class="hdr-btn" id="btn-hdr-export">↓</button>
+      <label class="hdr-btn" style="margin:0;">↑<input type="file" accept=".json" id="btn-hdr-import" style="display:none;"></label>
+      <button class="hdr-btn" id="btn-hdr-search">⌖</button>
+      <button class="hdr-btn" id="btn-hdr-sync">∞</button>
+    `;
     document.getElementById('btn-hdr-void').onclick = openVoid;
+    document.getElementById('btn-hdr-export').onclick = exportJSON;
+    document.getElementById('btn-hdr-import').onchange = importJSON;
     document.getElementById('btn-hdr-search').onclick = () => openModal('modal-search');
+    document.getElementById('btn-hdr-sync').onclick = syncAkashic;
   } else {
     container.innerHTML = `<button class="hdr-btn">⚙</button>`;
   }
