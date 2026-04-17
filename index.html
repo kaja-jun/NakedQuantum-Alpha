@@ -700,14 +700,14 @@ async function purgeDiscourse(id){await dbDelete("cosm_discourses",id);const t=a
 async function restoreDiscourse(id){const d=await getDiscourse(id);if(!d)return;const{isDeleted,deleted_at,...rest}=d;await dbPut("cosm_discourses",{...rest,updated_at:Date.now()});}
 
 /* CONTAINERS */
-const getContainer=()=>dbGetAll("containers");
+const getContainers=()=>dbGetAll("containers");
 const getContainer=id=>dbGet("containers",id);
 async function createContainer(data={}){const id="c_"+Date.now(),now=Date.now(),char={id,name:"New Container",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1,created_at:now,updated_at:now,...data};await dbPut("containers",char);return char;}
 async function updateContainer(id,updates){const char=await getContainer(id);if(!char)return;const u={...char,...updates,updated_at:Date.now()};await dbPut("containers",u);return u;}
 async function deleteContainer(id){const c=await getContainer(id);if(!c)return;await dbPut("containers",{...c,isDeleted:true,deleted_at:Date.now()});}
 const purgeContainer=id=>dbDelete("containers",id);
 async function restoreContainer(id){const c=await getContainer(id);if(!c)return;const{isDeleted,deleted_at,...rest}=c;await dbPut("containers",{...rest,updated_at:Date.now()});}
-async function getDeletedContainers(){const a=await dbGetAll("container");return a.filter(c=>c.isDeleted).sort((a,b)=>b.deleted_at-a.deleted_at);}
+async function getDeletedContainers(){const a=await dbGetAll("containers");return a.filter(c=>c.isDeleted).sort((a,b)=>b.deleted_at-a.deleted_at);}
 
 /* MOSAIC */
 async function getMosaicTile(dId){if(mosaicCache[dId]!==undefined)return mosaicCache[dId];const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",dId);if(!t.length){mosaicCache[dId]=null;return null;}t.sort((a,b)=>b.created_at-a.created_at);mosaicCache[dId]=t[0];return t[0];}
