@@ -168,12 +168,12 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .btn-purge { background: none; border: 1px solid var(--danger); color: #ff6060; font-size: 10px; font-weight: 700; padding: 5px 9px; border-radius: 7px; }
 .void-badge { font-size: 8px; padding: 2px 4px; border-radius: 3px; text-transform: uppercase; font-weight: 900; margin-left: 6px; }
 .void-badge.discourse { background: rgba(200,160,80,0.15); color: var(--accent); }
-.void-badge.character { background: rgba(160,216,160,0.15); color: #a0d8a0; }
+.void-badge.container { background: rgba(160,216,160,0.15); color: #a0d8a0; }
 
 .sanctuary-view { background: transparent; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.character-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.18s, background 0.18s; min-height: 100px; display: flex; flex-direction: column; justify-content: space-between; }
-.character-card:active { border-color: var(--accent); background: var(--surface2); }
-.character-card.long-pressing { background: var(--surface2); border-color: var(--accent); transform: scale(0.98); }
+.container-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.18s, background 0.18s; min-height: 100px; display: flex; flex-direction: column; justify-content: space-between; }
+.container-card:active { border-color: var(--accent); background: var(--surface2); }
+.container-card.long-pressing { background: var(--surface2); border-color: var(--accent); transform: scale(0.98); }
 .char-card-name { font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
 .char-card-role { font-size: 11px; color: var(--text); opacity: 0.8; font-style: italic; }
 .char-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 8px; }
@@ -437,7 +437,7 @@ select.cosm-input {
 
   <div class="view-panel sanctuary-view hidden" id="view-sanctuary">
     <div class="search-bar-wrap">
-      <input class="search-input" id="search-input-sanctuary" placeholder="Search characters...">
+      <input class="search-input" id="search-input-sanctuary" placeholder="Search containers...">
     </div>
     <div class="table-surface" id="sanctuary-surface"></div>
   </div>
@@ -453,7 +453,7 @@ select.cosm-input {
           <div class="forge-section-content">
             <div class="forge-input-group">
               <span class="forge-label">Name</span>
-              <input class="cosm-input" id="forge-name" placeholder="Character Name...">
+              <input class="cosm-input" id="forge-name" placeholder="Container Name...">
             </div>
             <div class="forge-input-group">
               <span class="forge-label">Role / Tagline</span>
@@ -511,7 +511,7 @@ select.cosm-input {
               <textarea class="forge-textarea" id="forge-relationships" placeholder="How they view others..."></textarea>
             </div>
             <div class="forge-input-group">
-              <span class="forge-label">Player Character</span>
+              <span class="forge-label">Player Container</span>
               <textarea class="forge-textarea" id="forge-pc-info" placeholder="Info about the player..."></textarea>
             </div>
             <div class="forge-input-group">
@@ -535,7 +535,7 @@ select.cosm-input {
     <div class="chat-header">
       <button class="btn-back-table" id="btn-chat-back">← Sanctuary</button>
       <div class="chat-char-info">
-        <div class="chat-char-name" id="chat-char-name">Character Name</div>
+        <div class="chat-char-name" id="chat-char-name">Container Name</div>
       </div>
       <button class="tbtn" id="btn-chat-edit">✎</button>
       <button class="tbtn" id="btn-chat-clear">✕</button>
@@ -666,7 +666,7 @@ const firefly=new FF();
 /* DB */
 const dbReq=indexedDB.open("SanctuaryDB_v2",3);
 dbReq.onupgradeneeded=e=>{const d=e.target.result;
-  if(!d.objectStoreNames.contains("characters"))d.createObjectStore("characters",{keyPath:"id"});
+  if(!d.objectStoreNames.contains("containers"))d.createObjectStore("containers",{keyPath:"id"});
   if(!d.objectStoreNames.contains("history")){const h=d.createObjectStore("history",{keyPath:"id",autoIncrement:true});h.createIndex("charId","charId",{unique:false});}
   if(!d.objectStoreNames.contains("summaries")){const s=d.createObjectStore("summaries",{keyPath:"id",autoIncrement:true});s.createIndex("charId","charId",{unique:false});}
   if(!d.objectStoreNames.contains("cosm_folders"))d.createObjectStore("cosm_folders",{keyPath:"id"});
@@ -699,15 +699,15 @@ async function deleteDiscourse(id){const d=await getDiscourse(id);if(!d)return;a
 async function purgeDiscourse(id){await dbDelete("cosm_discourses",id);const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",id);for(const x of t)await dbDelete("cosm_mosaic_tiles",x.id);const b=await dbGetByIndex("cosm_backlinks","discourse_id",id);for(const x of b)await dbDelete("cosm_backlinks",x.id);}
 async function restoreDiscourse(id){const d=await getDiscourse(id);if(!d)return;const{isDeleted,deleted_at,...rest}=d;await dbPut("cosm_discourses",{...rest,updated_at:Date.now()});}
 
-/* CHARACTERS */
-const getCharacters=()=>dbGetAll("characters");
-const getCharacter=id=>dbGet("characters",id);
-async function createCharacter(data={}){const id="c_"+Date.now(),now=Date.now(),char={id,name:"New Character",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1,created_at:now,updated_at:now,...data};await dbPut("characters",char);return char;}
-async function updateCharacter(id,updates){const char=await getCharacter(id);if(!char)return;const u={...char,...updates,updated_at:Date.now()};await dbPut("characters",u);return u;}
-async function deleteCharacter(id){const c=await getCharacter(id);if(!c)return;await dbPut("characters",{...c,isDeleted:true,deleted_at:Date.now()});}
-const purgeCharacter=id=>dbDelete("characters",id);
-async function restoreCharacter(id){const c=await getCharacter(id);if(!c)return;const{isDeleted,deleted_at,...rest}=c;await dbPut("characters",{...rest,updated_at:Date.now()});}
-async function getDeletedCharacters(){const a=await dbGetAll("characters");return a.filter(c=>c.isDeleted).sort((a,b)=>b.deleted_at-a.deleted_at);}
+/* CONTAINERS */
+const getContainer=()=>dbGetAll("containers");
+const getContainer=id=>dbGet("containers",id);
+async function createContainer(data={}){const id="c_"+Date.now(),now=Date.now(),char={id,name:"New Container",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1,created_at:now,updated_at:now,...data};await dbPut("containers",char);return char;}
+async function updateContainer(id,updates){const char=await getContainer(id);if(!char)return;const u={...char,...updates,updated_at:Date.now()};await dbPut("containers",u);return u;}
+async function deleteContainer(id){const c=await getContainer(id);if(!c)return;await dbPut("containers",{...c,isDeleted:true,deleted_at:Date.now()});}
+const purgeContainer=id=>dbDelete("containers",id);
+async function restoreContainer(id){const c=await getContainer(id);if(!c)return;const{isDeleted,deleted_at,...rest}=c;await dbPut("containers",{...rest,updated_at:Date.now()});}
+async function getDeletedContainers(){const a=await dbGetAll("container");return a.filter(c=>c.isDeleted).sort((a,b)=>b.deleted_at-a.deleted_at);}
 
 /* MOSAIC */
 async function getMosaicTile(dId){if(mosaicCache[dId]!==undefined)return mosaicCache[dId];const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",dId);if(!t.length){mosaicCache[dId]=null;return null;}t.sort((a,b)=>b.created_at-a.created_at);mosaicCache[dId]=t[0];return t[0];}
@@ -829,7 +829,7 @@ function updateFabMenu(mode){
   if(mode==='soup'){
     html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡ Quick Capture</button>`;
   } else {
-    html=`<button class="fab-item" id="fab-new-char">+ New Character</button><button class="fab-item" id="fab-open-forge">⚿ Character Forge</button>`;
+    html=`<button class="fab-item" id="fab-new-char">+ New Container</button><button class="fab-item" id="fab-open-forge">⚿ Container Forge</button>`;
   }
   html += `<button class="fab-item" id="fab-settings">⏀ Settings</button>`;
   menu.innerHTML = html;
@@ -839,8 +839,8 @@ function updateFabMenu(mode){
     document.getElementById('fab-new-discourse-fab').onclick=()=>{closeFab();handleNewDiscourse();};
     document.getElementById('fab-quick-capture').onclick=()=>{closeFab();openQuickCapture();};
   } else {
-    document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
-    document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
+    document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewContainer();};
+    document.getElementById('fab-open-forge').onclick=()=>{closeFab();openContainerForge();};
   }
   document.getElementById('fab-settings').onclick=()=>{closeFab();openSettingsModal();};
 }
@@ -994,20 +994,20 @@ async function deleteCurrentDiscourse(){
 /* SANCTUARY */
 async function renderSanctuaryView(){
   const surface=document.getElementById('sanctuary-surface');surface.innerHTML='';
-  const allC=await getCharacters();
+  const allC=await getContainers();
   const filtered=allC.filter(c=>!c.isDeleted&&((c.name||'').toLowerCase().includes(sanctuarySearchQuery)||(c.role||'').toLowerCase().includes(sanctuarySearchQuery)));
 
-  if(!filtered.length){surface.innerHTML='<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">No characters found</div></div>';return;}
+  if(!filtered.length){surface.innerHTML='<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">No containers found</div></div>';return;}
 
-  const l=document.createElement('div');l.className='cards-section-label';l.textContent='Characters';surface.appendChild(l);
+  const l=document.createElement('div');l.className='cards-section-label';l.textContent='Containers';surface.appendChild(l);
   const g=document.createElement('div');g.className='cards-grid';
   for(const c of filtered){
-    const card=document.createElement('div');card.className='character-card card';
+    const card=document.createElement('div');card.className='container-card card';
     card.innerHTML=`<div><div class="char-card-name">${escHtml(c.name)}</div><div class="char-card-role">${escHtml(c.role||'No role assigned')}</div></div><div class="char-card-footer"><div class="char-card-meta">${new Date(c.updated_at).toLocaleDateString()}</div></div>`;
     card.addEventListener('click',()=>{if(!longPressConsumed)openChat(c.id);});
-    card.addEventListener('mousedown',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}));
+    card.addEventListener('mousedown',e=>startLP(e,card,{type:'container',id:c.id,name:c.name,data:c}));
     card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
-    card.addEventListener('touchstart',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}),{passive:true});
+    card.addEventListener('touchstart',e=>startLP(e,card,{type:'container',id:c.id,name:c.name,data:c}),{passive:true});
     card.addEventListener('touchend',()=>cancelLP(card));card.addEventListener('touchcancel',()=>cancelLP(card));
     card.addEventListener('touchmove',e=>handleTM(e,card),{passive:true});
     g.appendChild(card);
@@ -1015,11 +1015,11 @@ async function renderSanctuaryView(){
   surface.appendChild(g);
 }
 
-async function handleNewCharacter(){const c=await createCharacter();openCharacterForge(c.id);}
+async function handleNewContainer(){const c=await createContainer();openContainerForge(c.id);}
 
-async function openCharacterForge(id){
+async function openContainerForge(id){
   activeCharId=id||null;
-  const c=id?await getCharacter(id):{name:"",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1};
+  const c=id?await getContainer(id):{name:"",role:"",backstory:"",personality:"",lorebook:"",scenario:"",inclination:"",relationships:"",pc_info:"",temperature:1};
   document.getElementById('forge-name').value=c.name||"";
   document.getElementById('forge-role').value=c.role||"";
   document.getElementById('forge-backstory').value=c.backstory||"";
@@ -1034,7 +1034,7 @@ async function openCharacterForge(id){
   showPanel('view-forge');
 }
 
-async function saveCharacterForge(){
+async function saveContainerForge(){
   const data={
     name:document.getElementById('forge-name').value.trim()||"Unnamed Soul",
     role:document.getElementById('forge-role').value.trim(),
@@ -1047,13 +1047,13 @@ async function saveCharacterForge(){
     pc_info:document.getElementById('forge-pc-info').value,
     temperature:parseFloat(document.getElementById('forge-temp').value)
   };
-  if(activeCharId)await updateCharacter(activeCharId,data);
-  else await createCharacter(data);
+  if(activeCharId)await updateContainer(activeCharId,data);
+  else await createContainer(data);
   showToast("Soul Anchored ✓");
-  closeCharacterForge();
+  closeContainerForge();
 }
 
-function closeCharacterForge(){
+function closeContainerForge(){
   showPanel('view-sanctuary');
   activeCharId=null;renderSanctuaryView();
 }
@@ -1061,7 +1061,7 @@ function closeCharacterForge(){
 /* CHAT */
 async function openChat(id){
   activeCharId=id;
-  const c=await getCharacter(id);
+  const c=await getContainer(id);
   document.getElementById('chat-char-name').textContent=c.name;
   document.getElementById('chat-messages').innerHTML='';
   const history=await dbGetByIndex('history','charId',id);
@@ -1074,7 +1074,7 @@ async function handleChatSend(){
   const text=input.value.trim();if(!text||!activeCharId)return;
   input.value='';input.style.height='auto';
   appendChatMessage('user',text);
-  const char=await getCharacter(activeCharId);
+  const char=await getContainer(activeCharId);
   const history=await dbGetByIndex('history','charId',activeCharId);
   const response=await callAIForChat(char,history,text);
   if(response){
@@ -1086,7 +1086,7 @@ async function handleChatSend(){
 
 async function callAIForChat(char,history,text){
   const key=localStorage.getItem("nq_api_key")||"";if(!key){showToast("Add API Key in Settings");return null;}
-  const sys=`You are ${char.name}. ${char.role}. Personality: ${char.personality}. Backstory: ${char.backstory}. Lore: ${char.lorebook}. Scenario: ${char.scenario}. Inclination: ${char.inclination}. Relationships: ${char.relationships}. PC Info: ${char.pc_info}. Respond in character, concise and evocative.`;
+  const sys=`You are ${char.name}. ${char.role}. Personality: ${char.personality}. Backstory: ${char.backstory}. Lore: ${char.lorebook}. Scenario: ${char.scenario}. Inclination: ${char.inclination}. Relationships: ${char.relationships}. PC Info: ${char.pc_info}. Respond in container, concise and evocative.`;
   const msgs=[{role:'system',content:sys},...history.slice(-10).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:text}];
   try{
     const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",messages:msgs,temperature:char.temperature||1.0})});
@@ -1105,7 +1105,7 @@ async function clearChatHistory(){if(!activeCharId||!confirm("Clear chat history
 function closeVoidView(){goBack();}
 async function renderVoidView(){
   const s=document.getElementById('void-surface');s.innerHTML='';
-  const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();
+  const delD=await getDeletedDiscourses(),delC=await getDeletedContainers();
   if(!delD.length&&!delC.length){s.innerHTML='<div class="table-empty" style="grid-column:unset;display:flex;"><div class="table-empty-glyph">◌</div><div class="table-empty-text">Void is empty</div></div>';return;}
   const list=document.createElement('div');list.style.cssText='display:flex;flex-direction:column;gap:8px;';
   for(const d of delD){
@@ -1117,15 +1117,15 @@ async function renderVoidView(){
   for(const c of delC){
     const date=new Date(c.deleted_at||c.updated_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
     const item=document.createElement('div');item.className='void-item';
-    item.innerHTML=`<div class="void-item-info"><div class="void-item-title">${escHtml(c.name)}<span class="void-badge character">Character</span></div><div class="void-item-date">Deleted ${date}</div></div><div class="void-item-actions"><button class="btn-restore" onclick="handleRestore('${c.id}','character')">↩ Undeath</button><button class="btn-purge" onclick="handlePurge('${c.id}','character')">✕ Purge</button></div>`;
+    item.innerHTML=`<div class="void-item-info"><div class="void-item-title">${escHtml(c.name)}<span class="void-badge container">Container</span></div><div class="void-item-date">Deleted ${date}</div></div><div class="void-item-actions"><button class="btn-restore" onclick="handleRestore('${c.id}','container')">↩ Undeath</button><button class="btn-purge" onclick="handlePurge('${c.id}','container')">✕ Purge</button></div>`;
     list.appendChild(item);
   }
   s.appendChild(list);
 }
 function openVoidView() { showPanel('view-void'); renderVoidView(); }
-async function handleRestore(id,type){if(type==='discourse')await restoreDiscourse(id);else await restoreCharacter(id);showToast("Restored ✓");await renderVoidView();}
-async function handlePurge(id,type){if(!confirm("Permanently delete?"))return;if(type==='discourse')await purgeDiscourse(id);else await purgeCharacter(id);showToast("Purged");await renderVoidView();}
-async function purgeAll(){const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();if(!delD.length&&!delC.length){showToast("Void is empty");return;}if(!confirm(`Permanently delete all items?`))return;for(const d of delD)await purgeDiscourse(d.id);for(const c of delC)await purgeCharacter(c.id);showToast("Void purged");await renderVoidView();}
+async function handleRestore(id,type){if(type==='discourse')await restoreDiscourse(id);else await restoreContainer(id);showToast("Restored ✓");await renderVoidView();}
+async function handlePurge(id,type){if(!confirm("Permanently delete?"))return;if(type==='discourse')await purgeDiscourse(id);else await purgeContainer(id);showToast("Purged");await renderVoidView();}
+async function purgeAll(){const delD=await getDeletedDiscourses(),delC=await getDeletedContainers();if(!delD.length&&!delC.length){showToast("Void is empty");return;}if(!confirm(`Permanently delete all items?`))return;for(const d of delD)await purgeDiscourse(d.id);for(const c of delC)await purgeContainer(c.id);showToast("Void purged");await renderVoidView();}
 
 /* SEARCH */
 function onSearchInput(val){searchQuery=val.trim().toLowerCase();renderTableView();}
@@ -1133,16 +1133,16 @@ async function openGlobalSearch(){document.getElementById('global-search-modal')
 function closeGlobalSearch(){document.getElementById('global-search-modal').classList.remove('visible');document.getElementById('cosm-overlay').classList.remove('active');}
 async function onGlobalSearchInput(query){
   const re=document.getElementById('global-search-results');if(!query.trim()){re.innerHTML='<div class="global-search-empty">Type to search...</div>';return;}
-  const q=query.toLowerCase(),folders=await getFolders(),discs=await getDiscourses(),chars=await getCharacters();
+  const q=query.toLowerCase(),folders=await getFolders(),discs=await getDiscourses(),chars=await getContainers();
   const fm=new Map(folders.map(f=>[f.id,f]));
   function gfp(fId){const p=[];let c=fId?fm.get(fId):null;while(c){p.unshift(c.name);c=c.parent_id?fm.get(c.parent_id):null;}return p.length?p.join(' / '):'The Soup';}
   const mf=folders.filter(f=>(f.name||'').toLowerCase().includes(q)).map(f=>({type:'folder',item:f,path:gfp(f.parent_id)}));
   const md=discs.filter(d=>!d.deleted_at&&((d.title||'').toLowerCase().includes(q)||(d.raw_text||'').toLowerCase().includes(q))).map(d=>({type:'discourse',item:d,path:gfp(d.folder_id)}));
-  const mc=chars.filter(c=>!c.isDeleted&&((c.name||'').toLowerCase().includes(q)||(c.role||'').toLowerCase().includes(q))).map(c=>({type:'character',item:c,path:'Sanctuary'}));
+  const mc=chars.filter(c=>!c.isDeleted&&((c.name||'').toLowerCase().includes(q)||(c.role||'').toLowerCase().includes(q))).map(c=>({type:'container',item:c,path:'Sanctuary'}));
   const all=[...mf,...md,...mc];
   if(!all.length){re.innerHTML='<div class="global-search-empty">No results</div>';return;}
-  re.innerHTML=all.map(r=>`<div class="global-search-result" data-type="${r.type}" data-id="${r.item.id}"><div class="global-search-result-title">${escHtml(r.type==='folder'?r.item.name:(r.type==='character'?r.item.name:(r.item.title||'Untitled')))}<span class="global-search-result-type ${r.type}">${r.type}</span></div><div class="global-search-result-path">${escHtml(r.path)}</div></div>`).join('');
-  re.querySelectorAll('.global-search-result').forEach(el=>{el.addEventListener('click',()=>{const type=el.dataset.type,id=el.dataset.id;closeGlobalSearch();if(type==='folder')enterFolder(id,fm.get(id)?.name||'Folder');else if(type==='character')openChat(id);else openDiscourse(id);});});
+  re.innerHTML=all.map(r=>`<div class="global-search-result" data-type="${r.type}" data-id="${r.item.id}"><div class="global-search-result-title">${escHtml(r.type==='folder'?r.item.name:(r.type==='container'?r.item.name:(r.item.title||'Untitled')))}<span class="global-search-result-type ${r.type}">${r.type}</span></div><div class="global-search-result-path">${escHtml(r.path)}</div></div>`).join('');
+  re.querySelectorAll('.global-search-result').forEach(el=>{el.addEventListener('click',()=>{const type=el.dataset.type,id=el.dataset.id;closeGlobalSearch();if(type==='folder')enterFolder(id,fm.get(id)?.name||'Folder');else if(type==='container')openChat(id);else openDiscourse(id);});});
 }
 
 /* FAB */
@@ -1170,14 +1170,14 @@ async function handleMgmtExport(){if(!mgmtItem)return;const item=mgmtItem;closeM
 async function handleMgmtDelete(){
   if(!mgmtItem)return;const item=mgmtItem;closeManagementModal();
   if(item.type==='folder'){if(!confirm(`Delete folder "${item.name}"?`))return;await deleteFolder(item.id);if(currentFolderId===item.id){breadcrumbPath.pop();currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;}await renderTableView();showToast("Folder deleted");}
-  else if(item.type==='character'){if(!confirm(`Delete character "${item.name}"?`))return;await deleteCharacter(item.id);await renderSanctuaryView();showToast("Character moved to Void");}
+  else if(item.type==='container'){if(!confirm(`Delete container "${item.name}"?`))return;await deleteContainer(item.id);await renderSanctuaryView();showToast("Container moved to Void");}
   else{if(!confirm(`Move "${item.name}" to the Void?`))return;await deleteDiscourse(item.id);await renderTableView();showToast("Moved to Void ◌");}
 }
 
 /* RENAME */
 function openRenameModal(){if(!mgmtItem)return;document.getElementById("rename-title").textContent=mgmtItem.type==='folder'?'Rename Folder':'Rename Discourse';document.getElementById("rename-input").value=mgmtItem.name||'';document.getElementById("rename-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");setTimeout(()=>document.getElementById("rename-input").focus(),100);}
 function closeRenameModal(){document.getElementById("rename-modal").classList.remove("visible");closeOverlay();}
-async function confirmRename(){if(!mgmtItem)return;const n=document.getElementById("rename-input").value.trim();if(!n)return;if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});else if(mgmtItem.type==='character'){await updateCharacter(mgmtItem.id,{name:n});renderSanctuaryView();}else await updateDiscourse(mgmtItem.id,{title:n});closeRenameModal();await renderTableView();mgmtItem=null;showToast("Renamed");}
+async function confirmRename(){if(!mgmtItem)return;const n=document.getElementById("rename-input").value.trim();if(!n)return;if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});else if(mgmtItem.type==='container'){await updateContainer(mgmtItem.id,{name:n});renderSanctuaryView();}else await updateDiscourse(mgmtItem.id,{title:n});closeRenameModal();await renderTableView();mgmtItem=null;showToast("Renamed");}
 
 /* MOVE */
 async function openMoveModal(){
@@ -1353,8 +1353,8 @@ async function exportMarkdown(){if(!currentDiscourseId)return;await saveCurrentD
 async function exportPDF(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let mh="";if(tile&&tile.anchors&&tile.anchors.length)mh=`<div style="border-left:3px solid #c8a050;padding:10px 16px;margin:16px 0;background:#f9f5ee;"><div style="font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:8px;color:#8a6e35;">◈ MOSAIC</div>${tile.anchors.map(a=>`<div style="margin:4px 0;">• ${escHtml(a)}</div>`).join('')}</div>`;const content=renderContent(d.raw_text||"");const fh=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(d.title||"Discourse")}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:0 auto;padding:20px;color:#1a1a1a;line-height:1.8;}h1{font-size:26px;border-bottom:1px solid #ddd;padding-bottom:10px;margin-bottom:6px;}.meta{font-size:12px;color:#888;margin-bottom:24px;}h2{font-size:20px;}h3{font-size:16px;color:#555;}pre{background:#f4f4f4;padding:14px;border-radius:6px;overflow-x:auto;}code{font-family:monospace;font-size:13px;}blockquote{border-left:3px solid #ccc;padding-left:14px;color:#666;font-style:italic;margin:12px 0;}</style></head><body><h1>${escHtml(d.title||"Untitled")}</h1><div class="meta">${new Date(d.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</div>${mh}${content}</body></html>`;const iframe=document.createElement('iframe');iframe.style.cssText='position:absolute;width:0;height:0;border:none;';document.body.appendChild(iframe);const doc=iframe.contentWindow.document;doc.open();doc.write(fh);doc.close();setTimeout(()=>{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(()=>document.body.removeChild(iframe),10000);},500);}
 async function exportDiscourseMarkdown(id){const d=await getDiscourse(id);if(!d)return;const tile=await getMosaicTile(id);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported");}
 async function exportFolderContents(fId){const discs=(await dbGetByIndex("cosm_discourses","folder_id",fId)).filter(d=>!d.isDeleted);if(!discs.length){showToast("No discourses to export");return;}let md=`# Folder Export\n\n`;for(const d of discs){const t=await getMosaicTile(d.id);md+=`## ${d.title}\n\n`;if(t&&t.anchors&&t.anchors.length)md+=`> **Mosaic**\n${t.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";md+=`\n\n---\n\n`;}const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`folder_export_${new Date().toISOString().slice(0,10)}.md`;a.click();URL.revokeObjectURL(url);showToast(`Exported ${discs.length} discourse(s)`);}
-async function exportJSON(){const f=await dbGetAll("cosm_folders"),d=await dbGetAll("cosm_discourses"),m=await dbGetAll("cosm_mosaic_tiles"),b=await dbGetAll("cosm_backlinks"),c=await dbGetAll("characters"),h=await dbGetAll("history"),s=await dbGetAll("summaries");const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:f,cosm_discourses:d,cosm_mosaic_tiles:m,cosm_backlinks:b,characters:c,history:h,summaries:s};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`NQ_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("Backup exported ✓");}
-async function importJSON(event){const file=event.target.files[0];if(!file)return;if(!confirm("Import will merge with existing data. Continue?")){event.target.value='';return;}try{const text=await file.text();const payload=JSON.parse(text);const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store]))for(const item of payload[store])await dbPut(store,item);}mosaicCache={};if(currentMode==='soup')await renderTableView();else await renderSanctuaryView();showToast("Import complete ✓");}catch(err){console.error(err);showToast("Import failed");}event.target.value='';}
+async function exportJSON(){const f=await dbGetAll("cosm_folders"),d=await dbGetAll("cosm_discourses"),m=await dbGetAll("cosm_mosaic_tiles"),b=await dbGetAll("cosm_backlinks"),c=await dbGetAll("containers"),h=await dbGetAll("history"),s=await dbGetAll("summaries");const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:f,cosm_discourses:d,cosm_mosaic_tiles:m,cosm_backlinks:b,containers:c,history:h,summaries:s};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`NQ_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("Backup exported ✓");}
+async function importJSON(event){const file=event.target.files[0];if(!file)return;if(!confirm("Import will merge with existing data. Continue?")){event.target.value='';return;}try{const text=await file.text();const payload=JSON.parse(text);const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','containers','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store]))for(const item of payload[store])await dbPut(store,item);}mosaicCache={};if(currentMode==='soup')await renderTableView();else await renderSanctuaryView();showToast("Import complete ✓");}catch(err){console.error(err);showToast("Import failed");}event.target.value='';}
 
 /* MOSAIC EXTRACT */
 async function extractMemory(){
@@ -1371,8 +1371,8 @@ async function extractMemory(){
 async function confirmDeleteMosaic(){if(!currentDiscourseId)return;if(!confirm("Clear mosaic anchors?"))return;await deleteMosaicTile(currentDiscourseId);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic cleared");}
 
 /* AKASHIC */
-async function backupToAkashic(){try{const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:await dbGetAll("cosm_folders"),cosm_discourses:await dbGetAll("cosm_discourses"),cosm_mosaic_tiles:await dbGetAll("cosm_mosaic_tiles"),cosm_backlinks:await dbGetAll("cosm_backlinks"),characters:await dbGetAll("characters"),history:await dbGetAll("history"),summaries:await dbGetAll("summaries")};const res=await fetch(`${AKASHIC_URL}/backup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:cosmUserId,data:JSON.stringify(payload)})});if(res.ok)showToast('Akashic Synced ◈');}catch(e){console.error(e);}}
-async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will overwrite local fragments."))return;try{const res=await fetch(`${AKASHIC_URL}/backup/latest?user_id=${cosmUserId}`);if(!res.ok)throw new Error('No backup');const payload=JSON.parse(await res.text());const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store])){const all=await dbGetAll(store);for(const item of all)await dbDelete(store,item.id);for(const item of payload[store])await dbPut(store,item);}}showToast('Sanctuary Restored ◈');setTimeout(()=>location.reload(),1200);}catch(e){console.error(e);showToast('Akashic offline');}}
+async function backupToAkashic(){try{const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:await dbGetAll("cosm_folders"),cosm_discourses:await dbGetAll("cosm_discourses"),cosm_mosaic_tiles:await dbGetAll("cosm_mosaic_tiles"),cosm_backlinks:await dbGetAll("cosm_backlinks"),containers:await dbGetAll("containers"),history:await dbGetAll("history"),summaries:await dbGetAll("summaries")};const res=await fetch(`${AKASHIC_URL}/backup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:cosmUserId,data:JSON.stringify(payload)})});if(res.ok)showToast('Akashic Synced ◈');}catch(e){console.error(e);}}
+async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will overwrite local fragments."))return;try{const res=await fetch(`${AKASHIC_URL}/backup/latest?user_id=${cosmUserId}`);if(!res.ok)throw new Error('No backup');const payload=JSON.parse(await res.text());const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','containers','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store])){const all=await dbGetAll(store);for(const item of all)await dbDelete(store,item.id);for(const item of payload[store])await dbPut(store,item);}}showToast('Sanctuary Restored ◈');setTimeout(()=>location.reload(),1200);}catch(e){console.error(e);showToast('Akashic offline');}}
 
 /* LONG PRESS */
 function startLP(e,card,item){const touch=e.touches?e.touches[0]:e;touchStartPos={x:touch.clientX,y:touch.clientY};isLongPress=false;longPressConsumed=false;card.classList.add('long-pressing');longPressTimer=setTimeout(()=>{isLongPress=true;longPressConsumed=true;card.classList.remove('long-pressing');mgmtItem=item;openManagementModal(item);},LONG_PRESS_DURATION);}
@@ -1436,13 +1436,13 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
 
 
 document.getElementById('search-input-sanctuary').addEventListener('input',e=>{sanctuarySearchQuery=e.target.value.toLowerCase();renderSanctuaryView();});
-  document.getElementById('btn-forge-save').addEventListener('click',saveCharacterForge);
-  document.getElementById('btn-forge-close').addEventListener('click',closeCharacterForge);
+  document.getElementById('btn-forge-save').addEventListener('click',saveContainerForge);
+  document.getElementById('btn-forge-close').addEventListener('click',closeContainerForge);
   document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
   document.querySelectorAll('.forge-section-header').forEach(h=>{h.addEventListener('click',()=>{h.parentElement.classList.toggle('open');});});
 
   document.getElementById('btn-chat-back').addEventListener('click',()=>goBack());
-  document.getElementById('btn-chat-edit').addEventListener('click',()=>openCharacterForge(activeCharId));
+  document.getElementById('btn-chat-edit').addEventListener('click',()=>openContainerForge(activeCharId));
   document.getElementById('btn-chat-clear').addEventListener('click',clearChatHistory);
   document.getElementById('btn-send').addEventListener('click',handleChatSend);
   document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleChatSend();}});
