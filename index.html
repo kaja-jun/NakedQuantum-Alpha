@@ -222,6 +222,14 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .cosm-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 10px; font-size: 16px; outline: none; font-family: -apple-system, sans-serif; }
 .cosm-input:focus { border-color: var(--accent-dim); }
 .cosm-select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 10px; font-size: 16px; outline: none; -webkit-appearance: none; appearance: none; }
+select.cosm-input {
+  appearance: none; /* Removes default arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6560' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
 .modal-buttons { display: flex; gap: 10px; }
 .modal-buttons button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-weight: 900; font-size: 14px; }
 .modal-btn-cancel { background: var(--surface2); color: var(--text); }
@@ -249,6 +257,100 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .fab-main { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); border: none; color: #000; font-size: 24px; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 20px rgba(200,160,80,0.3); transition: transform 0.2s ease; flex-shrink: 0; }
 .fab-main.open { transform: rotate(45deg); }
 
+.chat-input-wrapper {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.naked-model-input {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  outline: none;
+  width: 100%;
+}
+
+.model-scroller {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+}
+
+.model-grid {
+  display: flex;
+  flex-wrap: wrap; /* Stacks them as they fill the width */
+  gap: 6px;
+  padding: 8px 0;
+  max-height: 120px; /* Limits growth, allows vertical scroll if you have 50+ models */
+  overflow-y: auto;
+}
+
+.model-chip {
+  padding: 4px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.model-chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(200, 160, 80, 0.05);
+}
+
+#userInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border); /* One clean line to separate chat from input */
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 16px !important;
+  padding: 15px;
+  outline: none;
+  resize: none;
+  min-height: 50px;
+  max-height: 200px;
+}
+
+
+#userInput:focus {
+  border-top: 1px solid var(--accent-dim); /* The glow when you type */
+}
+
+.send-icon-btn {
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  font-size: 0.7rem;
+  padding: 4px 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+
 #cosm-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; padding: 9px 20px; border-radius: 20px; font-size: 12px; font-weight: 900; letter-spacing: 1px; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.25s; white-space: nowrap; }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -269,9 +371,6 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 <div class="view-host">
   <div class="view-panel soup-view" id="view-soup">
     <div class="breadcrumb-bar" id="breadcrumb-bar"></div>
-    <div class="table-action-bar">
-      <button class="btn-table-action" id="btn-new-discourse">+ New Discourse</button>
-    </div>
     <div class="search-bar-wrap" id="search-bar-wrap" style="display:none;">
       <input class="search-input" id="search-input" placeholder="Search discourses...">
     </div>
@@ -337,9 +436,6 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
   </div>
 
   <div class="view-panel sanctuary-view hidden" id="view-sanctuary">
-    <div class="table-action-bar">
-      <button class="btn-table-action" id="btn-new-character">+ New Character</button>
-    </div>
     <div class="search-bar-wrap">
       <input class="search-input" id="search-input-sanctuary" placeholder="Search characters...">
     </div>
@@ -463,7 +559,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
   <div class="modal-title">New Folder</div>
   <input class="cosm-input" id="folder-name-input" placeholder="Folder name..." maxlength="60">
   <div style="font-size:11px;color:var(--muted);margin-bottom:-6px;">Parent Folder</div>
-  <select class="cosm-select" id="folder-parent-select"><option value="">Root</option></select>
+  <select class="cosm-select" id="folder-parent-select"><option value="">The Soup</option></select>
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-folder-cancel">Cancel</button>
     <button class="modal-btn-confirm" id="btn-folder-confirm">Create</button>
@@ -491,7 +587,7 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 
 <div class="cosm-modal" id="move-modal">
   <div class="modal-title">Move to Folder</div>
-  <select class="cosm-select" id="move-parent-select"><option value="">Root</option></select>
+  <select class="cosm-select" id="move-parent-select"><option value="">The soup</option></select>
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-move-cancel">Cancel</button>
     <button class="modal-btn-confirm" id="btn-move-confirm">Move</button>
@@ -520,16 +616,32 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 </div>
 
 <div class="cosm-modal" id="settings-modal">
-  <div class="modal-title">Settings</div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:-4px;">OpenRouter API Key</div>
-  <input type="password" class="cosm-input" id="input-api-key" placeholder="sk-or-...">
-  <div style="font-size:11px;color:var(--muted);margin-bottom:-4px;">Active Model</div>
-  <input class="cosm-input" id="input-model" placeholder="google/gemini-2.0-flash-001">
-  <div class="modal-buttons">
-    <button class="modal-btn-cancel" id="btn-settings-cancel">Cancel</button>
-    <button class="modal-btn-confirm" id="btn-settings-confirm">Save</button>
+  <div class="modal-title">Neural Gateway</div>
+  
+  <div class="settings-group" style="margin-bottom: 20px;">
+    <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">API Credentials</label>
+    <input type="password" class="cosm-input" id="input-api-key" placeholder="Universal API Key">
+    <input type="text" class="cosm-input" id="input-base-url" placeholder="https://openrouter.ai/api/v1">
+  </div>
+
+  <div class="settings-group" style="margin-bottom: 20px;">
+    <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Active Model Engine</label>
+    <select id="input-model" class="cosm-input" style="appearance:auto; -webkit-appearance:menulist; background:var(--surface2); color:var(--text);"></select>
+    
+    <button onclick="removeActiveModel()" style="background:#1a0000; color:var(--danger); width:100%; height:40px; border-radius:8px; border:1px solid #330000; font-weight:900; font-size:10px; letter-spacing:1.5px; margin-top:8px; text-transform:uppercase;">Purge to the Abyss</button>
+  </div>
+
+  <div style="display:flex; gap:8px; align-items:center;">
+    <input type="text" id="summon-input" class="cosm-input" placeholder="Paste OpenRouter ID..." style="margin:0 !important; flex:1;">
+    <button onclick="summonNewModel()" style="background:var(--accent); color:#000; width:60px; height:40px; border-radius:8px; font-weight:900; font-size:11px; border:none;">ADD</button>
+  </div>
+
+  <div class="modal-buttons" style="margin-top:25px;">
+    <button class="modal-btn-cancel" onclick="closeOverlay()">Cancel</button>
+    <button class="modal-btn-confirm" id="btn-settings-confirm">Solidify</button>
   </div>
 </div>
+
 
 <div id="cosm-toast"></div>
 
@@ -538,7 +650,7 @@ document.addEventListener('touchstart',()=>{},{passive:true});
 
 /* STATE */
 let db=null,currentMode='soup',currentDiscourseId=null,currentFolderId=null,
-    breadcrumbPath=[{id:null,name:'◈ root'}],editorMode='write',currentView='table',
+    breadcrumbPath=[{id:null,name:'◈  The soup'}],editorMode='write',currentView='table',
     fabOpen=false,mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
 const AKASHIC_URL='https://wandering-violet-964a.gazajar.workers.dev';
 
@@ -606,6 +718,67 @@ async function getBacklink(dId){const l=await dbGetByIndex("cosm_backlinks","dis
 /* INIT */
 async function init(){updateHeaderButtons();updateFabMenu(currentMode);await renderTableView();document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';}
 
+/*Naked Handle*/
+
+async function handleSend() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // 1. Pull Coordinates from localStorage
+  const apiKey = localStorage.getItem('nq_api_key');
+  const activeModel = localStorage.getItem('nq_model') || "gpt-4o"; 
+  // We use a base URL and append the specific path
+  const baseUrl = localStorage.getItem('nq_base_url') || "https://openrouter.ai/api/v1";
+  const strikeUrl = `${baseUrl}/chat/completions`;
+
+  if (!apiKey) {
+    showToast("Neural Link Failure: No API Key");
+    return;
+  }
+
+  // UI: Show user message
+  appendMessage('user', text);
+  input.value = '';
+
+  // 2. Prepare History (Pulled from IndexedDB for depth)
+  const historyData = await getFromDB('history', 'current_thread') || { messages: [] };
+  historyData.messages.push({ role: 'user', content: text });
+
+  try {
+    // 3. The Strike
+    const response = await fetch(strikeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "X-Title": "NakedQuantum"
+      },
+      body: JSON.stringify({
+        model: activeModel,
+        messages: historyData.messages,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.error) throw new Error(data.error.message);
+
+    const aiText = data.choices[0].message.content;
+
+    // 4. Update UI & Witnessing History
+    appendMessage('assistant', aiText);
+    historyData.messages.push({ role: 'assistant', content: aiText });
+    await saveToDB('history', { id: 'current_thread', messages: historyData.messages });
+
+  } catch (err) {
+    console.error("Strike Failed:", err);
+    showToast(`Strike Interrupted: ${err.message}`);
+  }
+}
+
+
 /* LONG PRESS WORDMARK */
 let wpt=null;
 const wEl=document.getElementById('nq-wordmark');
@@ -654,11 +827,11 @@ function updateFabMenu(mode){
   const menu=document.getElementById('fab-menu');
   let html = '';
   if(mode==='soup'){
-    html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡Quick Capture</button>`;
+    html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡ Quick Capture</button>`;
   } else {
-    html=`<button class="fab-item" id="fab-new-char">◈ New Character</button><button class="fab-item" id="fab-open-forge">⚒ Character Forge</button>`;
+    html=`<button class="fab-item" id="fab-new-char">+ New Character</button><button class="fab-item" id="fab-open-forge">⚿ Character Forge</button>`;
   }
-  html += `<button class="fab-item" id="fab-settings">⚙ Settings</button>`;
+  html += `<button class="fab-item" id="fab-settings">⏀ Settings</button>`;
   menu.innerHTML = html;
   
   if(mode==='soup'){
@@ -767,7 +940,7 @@ async function openDiscourse(id){
   document.getElementById("content-textarea").value=disc.raw_text||"";
   await renderMeta(disc);await renderMosaicDisplay(id);
   setEditorMode('write');showPanel('view-lighthouse');
-  if(disc.folder_id&&currentFolderId!==disc.folder_id){const f=await dbGet("cosm_folders",disc.folder_id);if(f){breadcrumbPath=[{id:null,name:'◈ root'},{id:disc.folder_id,name:f.name}];currentFolderId=disc.folder_id;}}
+  if(disc.folder_id&&currentFolderId!==disc.folder_id){const f=await dbGet("cosm_folders",disc.folder_id);if(f){breadcrumbPath=[{id:null,name:'◈ The Soup'},{id:disc.folder_id,name:f.name}];currentFolderId=disc.folder_id;}}
 }
 
 async function renderMeta(disc){
@@ -803,14 +976,14 @@ async function newDiscourseInCurrent(){
   await openDiscourse(disc.id);setTimeout(()=>{const t=document.getElementById("discourse-title");t.select();t.focus();},120);
 }
 
-async function newDiscourseAtRoot(){
+async function newDiscourseAtSoup(){
   const folders=await getFolders();const count=folders.filter(f=>f.name.startsWith('Unknown_')).length+1;const fn=`Unknown_${count}`;
-  const fId=await createFolder(fn,null);breadcrumbPath=[{id:null,name:'◈ root'},{id:fId,name:fn}];currentFolderId=fId;
+  const fId=await createFolder(fn,null);breadcrumbPath=[{id:null,name:'◈ The Soup'},{id:fId,name:fn}];currentFolderId=fId;
   const disc=await createDiscourse({title:"Untitled Discourse",raw_text:"",folder_id:fId});
   await openDiscourse(disc.id);setTimeout(()=>{const t=document.getElementById("discourse-title");t.select();t.focus();},120);showToast(`Created ${fn}`);
 }
 
-function handleNewDiscourse(){currentFolderId===null?newDiscourseAtRoot():newDiscourseInCurrent();}
+function handleNewDiscourse(){currentFolderId===null?newDiscourseAtSoup():newDiscourseInCurrent();}
 
 async function deleteCurrentDiscourse(){
   if(!currentDiscourseId)return;if(!confirm("Move this discourse to the Void?"))return;
@@ -962,7 +1135,7 @@ async function onGlobalSearchInput(query){
   const re=document.getElementById('global-search-results');if(!query.trim()){re.innerHTML='<div class="global-search-empty">Type to search...</div>';return;}
   const q=query.toLowerCase(),folders=await getFolders(),discs=await getDiscourses(),chars=await getCharacters();
   const fm=new Map(folders.map(f=>[f.id,f]));
-  function gfp(fId){const p=[];let c=fId?fm.get(fId):null;while(c){p.unshift(c.name);c=c.parent_id?fm.get(c.parent_id):null;}return p.length?p.join(' / '):'Root';}
+  function gfp(fId){const p=[];let c=fId?fm.get(fId):null;while(c){p.unshift(c.name);c=c.parent_id?fm.get(c.parent_id):null;}return p.length?p.join(' / '):'The Soup';}
   const mf=folders.filter(f=>(f.name||'').toLowerCase().includes(q)).map(f=>({type:'folder',item:f,path:gfp(f.parent_id)}));
   const md=discs.filter(d=>!d.deleted_at&&((d.title||'').toLowerCase().includes(q)||(d.raw_text||'').toLowerCase().includes(q))).map(d=>({type:'discourse',item:d,path:gfp(d.folder_id)}));
   const mc=chars.filter(c=>!c.isDeleted&&((c.name||'').toLowerCase().includes(q)||(c.role||'').toLowerCase().includes(q))).map(c=>({type:'character',item:c,path:'Sanctuary'}));
@@ -978,7 +1151,7 @@ function closeFab(){fabOpen=false;document.getElementById('fab-menu').classList.
 
 /* FOLDER MODAL */
 async function openFolderModal(){
-  const sel=document.getElementById("folder-parent-select");sel.innerHTML='<option value="">Root</option>';
+  const sel=document.getElementById("folder-parent-select");sel.innerHTML='<option value="">The Soup</option>';
   const folders=await getFolders();folders.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.name;if(f.id===currentFolderId)o.selected=true;sel.appendChild(o);});
   document.getElementById("folder-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");setTimeout(()=>document.getElementById("folder-name-input").focus(),100);
 }
@@ -1008,7 +1181,7 @@ async function confirmRename(){if(!mgmtItem)return;const n=document.getElementBy
 
 /* MOVE */
 async function openMoveModal(){
-  if(!mgmtItem)return;const sel=document.getElementById("move-parent-select");sel.innerHTML='<option value="">Root</option>';
+  if(!mgmtItem)return;const sel=document.getElementById("move-parent-select");sel.innerHTML='<option value="">The Soup</option>';
   const folders=await getFolders();const vf=folders.filter(f=>f.id!==mgmtItem.id);
   for(const f of vf){const o=document.createElement('option');o.value=f.id;o.textContent=f.name;const cp=mgmtItem.type==='folder'?mgmtItem.data.parent_id:mgmtItem.data.folder_id;if(f.id===cp)o.selected=true;sel.appendChild(o);}
   document.getElementById("move-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");
@@ -1018,7 +1191,7 @@ async function confirmMove(){
   if(!mgmtItem)return;const np=document.getElementById("move-parent-select").value||null;
   if(mgmtItem.type==='folder'){if(np===mgmtItem.id){showToast("Can't move into itself");return;}if(np){const af=await getFolders();let ci=np;while(ci){const p=af.find(f=>f.id===ci);if(!p)break;if(p.parent_id===mgmtItem.id){showToast("Can't move into a child");return;}ci=p.parent_id;}}await dbPut("cosm_folders",{...mgmtItem.data,parent_id:np});}
   else await updateDiscourse(mgmtItem.id,{folder_id:np});
-  let dn="Root";if(np){const df=await dbGet("cosm_folders",np);if(df)dn=df.name;}
+  let dn="The Soup";if(np){const df=await dbGet("cosm_folders",np);if(df)dn=df.name;}
   closeMoveModal();mgmtItem=null;await renderTableView();showToast(`Moved to ${dn}`);
 }
 
@@ -1033,6 +1206,7 @@ async function openQuickCapture(){
   document.getElementById('capture-modal').classList.add('visible');document.getElementById('cosm-overlay').classList.add('active');
   setTimeout(()=>document.getElementById('capture-body').focus(),100);
 }
+
 function closeQuickCapture(){document.getElementById('capture-modal').classList.remove('visible');closeOverlay();}
 async function confirmQuickCapture(){
   if(_cs)return;_cs=true;
@@ -1047,8 +1221,96 @@ async function confirmQuickCapture(){
   }catch(err){console.error(err);showToast('Capture failed');}finally{_cs=false;}
 }
 
-/* SETTINGS */
-function openSettingsModal(){document.getElementById('settings-modal').classList.add('visible');document.getElementById('cosm-overlay').classList.add('active');}
+// 1. Initial State
+let modelHistory = JSON.parse(localStorage.getItem('nq_model_history')) || [
+  'anthropic/claude-3.5-sonnet',
+  'openai/gpt-4o',
+  'google/gemini-2.0-flash-001'
+];
+
+// 2. Refresh the Selector
+function renderModelSelect() {
+  const select = document.getElementById('input-model');
+  const currentModel = localStorage.getItem('nq_model');
+  select.innerHTML = '';
+  
+  modelHistory.forEach(model => {
+    const opt = document.createElement('option');
+    opt.value = model;
+    opt.innerText = model; // Full ID for clarity
+    if(model === currentModel) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+// 3. Summon New Engine
+function summonNewModel() {
+  const input = document.getElementById('summon-input');
+  const val = input.value.trim();
+  if(!val) return;
+
+  if(!modelHistory.includes(val)) {
+    modelHistory.push(val);
+    localStorage.setItem('nq_model_history', JSON.stringify(modelHistory));
+    renderModelSelect();
+    document.getElementById('input-model').value = val; // Auto-select it
+    input.value = '';
+    showToast("Engine Summoned");
+  }
+}
+
+// 4. Targeted Purge
+function removeActiveModel() {
+  const select = document.getElementById('input-model');
+  const target = select.value;
+  
+  if(modelHistory.length <= 1) {
+    showToast("Cannot purge the last remaining engine");
+    return;
+  }
+
+  modelHistory = modelHistory.filter(m => m !== target);
+  localStorage.setItem('nq_model_history', JSON.stringify(modelHistory));
+  renderModelSelect();
+  showToast("Purged to the Abyss");
+}
+
+// 5. Update the Open Settings trigger
+function openSettingsModal(){
+  // 1. Fill the inputs
+  document.getElementById('input-api-key').value = localStorage.getItem('nq_api_key') || '';
+  document.getElementById('input-base-url').value = localStorage.getItem('nq_base_url') || 'https://openrouter.ai/api/v1';
+  
+  // 2. Refresh the engine list
+  renderModelSelect();
+  
+  // 3. Show the UI
+  document.getElementById('settings-modal').classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
+}
+
+// Ensure this listener is active in your script
+document.getElementById('btn-settings-confirm').addEventListener('click', () => {
+  const k = document.getElementById('input-api-key').value.trim();
+  const u = document.getElementById('input-base-url').value.trim();
+  const m = document.getElementById('input-model').value; 
+
+  localStorage.setItem('nq_api_key', k);
+  localStorage.setItem('nq_base_url', u);
+  localStorage.setItem('nq_model', m);
+
+  closeOverlay(); // This is the function that hides everything
+  showToast("Gateway Solidified");
+});
+
+// Triple-check your closeOverlay function exists:
+function closeOverlay() {
+  const modal = document.getElementById('settings-modal');
+  const overlay = document.getElementById('cosm-overlay');
+  if(modal) modal.classList.remove('visible');
+  if(overlay) overlay.classList.remove('active');
+}
+
 
 /* EDITOR */
 function setEditorMode(mode){
@@ -1126,7 +1388,6 @@ function escHtml(str){if(!str)return"";return String(str).replace(/&/g,"&amp;").
 
 /* EVENT BINDING */
 document.addEventListener('DOMContentLoaded',()=> {
-  document.getElementById('btn-new-discourse').addEventListener('click',handleNewDiscourse);
   document.getElementById('fab-main').addEventListener('click',toggleFab);
   document.getElementById('btn-close-void').addEventListener('click',()=>goBack());
   document.getElementById('btn-purge-all').addEventListener('click',purgeAll);
@@ -1158,11 +1419,23 @@ document.addEventListener('DOMContentLoaded',()=> {
   document.getElementById('btn-capture-confirm').addEventListener('click',confirmQuickCapture);
   document.getElementById('capture-body').addEventListener('input',function(){const t=document.getElementById('capture-title');if(t.dataset.userEdited==='true')return;const w=this.value.split('\n')[0].trim().split(/\s+/).filter(Boolean).slice(0,4).join(' ');t.value=w||'';});
   document.getElementById('capture-title').addEventListener('input',function(){this.dataset.userEdited='true';});
-  document.getElementById('btn-settings-cancel').addEventListener('click',closeOverlay);
-  document.getElementById('btn-settings-confirm').addEventListener('click',()=>{const k=document.getElementById('input-api-key').value,m=document.getElementById('input-model').value;localStorage.setItem('nexus_v7_key',k);localStorage.setItem('nq_api_key',k);localStorage.setItem('activeModel_v1',m);localStorage.setItem('nq_model',m);closeOverlay();showToast("Settings Anchored");});
+    // --- CLEAN SETTINGS WIRING ---
+  // Update your existing Confirm Listener
+document.getElementById('btn-settings-confirm').addEventListener('click', () => {
+  const k = document.getElementById('input-api-key').value.trim();
+  const u = document.getElementById('input-base-url').value.trim();
+  const m = document.getElementById('input-model').value; // Grabs the selected option
 
-  document.getElementById('btn-new-character').addEventListener('click',handleNewCharacter);
-  document.getElementById('search-input-sanctuary').addEventListener('input',e=>{sanctuarySearchQuery=e.target.value.toLowerCase();renderSanctuaryView();});
+  localStorage.setItem('nq_api_key', k);
+  localStorage.setItem('nq_base_url', u);
+  localStorage.setItem('nq_model', m);
+
+  closeOverlay();
+  showToast("Gateway Solidified");
+});
+
+
+document.getElementById('search-input-sanctuary').addEventListener('input',e=>{sanctuarySearchQuery=e.target.value.toLowerCase();renderSanctuaryView();});
   document.getElementById('btn-forge-save').addEventListener('click',saveCharacterForge);
   document.getElementById('btn-forge-close').addEventListener('click',closeCharacterForge);
   document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
