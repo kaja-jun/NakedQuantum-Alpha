@@ -531,22 +531,34 @@ select.cosm-input {
     </div>
   </div>
 
-  <div class="view-panel chat-view hidden" id="view-chat">
-    <div class="chat-header">
-      <button class="btn-back-table" id="btn-chat-back">← Sanctuary</button>
-      <div class="chat-char-info">
-        <div class="chat-char-name" id="chat-char-name">Character Name</div>
-      </div>
-      <button class="tbtn" id="btn-chat-edit">✎</button>
-      <button class="tbtn" id="btn-chat-clear">✕</button>
+ <div class="view-panel chat-view hidden" id="view-chat">
+  <div class="chat-header">
+    <button class="btn-back-table" id="btn-chat-back">← Sanctuary</button>
+    <div class="chat-char-info">
+      <div class="chat-char-name" id="chat-char-name">Character Name</div>
     </div>
-    <div class="chat-messages" id="chat-messages"></div>
-    <div class="chat-input-area">
-      <textarea class="chat-input" id="chat-input" placeholder="Send a message..." rows="1"></textarea>
-      <button class="btn-send" id="btn-send">✦</button>
-    </div>
+    <button class="tbtn gold" id="btn-save-memory">◈ M</button>
+    <button class="tbtn" id="btn-chat-edit">✎</button>
+    <button class="tbtn" id="btn-chat-clear">✕</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-area">
+    <textarea class="chat-input" id="chat-input" placeholder="Send a message..." rows="1"></textarea>
+    <button class="btn-send" id="btn-send">✦</button>
   </div>
 </div>
+
+<div class="view-panel hidden" id="view-memory" style="background:var(--bg);display:flex;flex-direction:column;">
+  <div class="lighthouse-nav">
+    <button class="btn-back-table" id="btn-memory-back">← Chat</button>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--accent);font-weight:900;">◈ MEMORY VAULT</div>
+    <button class="tbtn gold" id="btn-add-manual-memory">+ Anchor</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px 100px;">
+    <div id="memory-surface"></div>
+  </div>
+</div>
+
 
 <div class="fab-container" id="fab-container">
   <div class="fab-menu" id="fab-menu"></div>
@@ -798,7 +810,7 @@ function switchAppMode(mode){
 
 /* SHOW PANEL (Unifying logic) */
 function showPanel(id){
-  const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat'];
+  const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat','view-memory'];
   panels.forEach(p=>{
     const el=document.getElementById(p);
     if(el)el.classList.add('hidden');
@@ -1074,25 +1086,131 @@ async function handleChatSend(){
   const text=input.value.trim();if(!text||!activeCharId)return;
   input.value='';input.style.height='auto';
   appendChatMessage('user',text);
+  
+  // Save user message FIRST before AI call
+  await dbPut('history',{charId:activeCharId,role:'user',content:text,created_at:Date.now()});
+  
   const char=await getCharacter(activeCharId);
   const history=await dbGetByIndex('history','charId',activeCharId);
   const response=await callAIForChat(char,history,text);
+  
   if(response){
     appendChatMessage('char',response);
-    await dbPut('history',{charId:activeCharId,role:'user',content:text,created_at:Date.now()});
     await dbPut('history',{charId:activeCharId,role:'char',content:response,created_at:Date.now()});
   }
 }
 
+
+async function summariseHistory(charId,messages){
+  const key=localStorage.getItem("nq_api_key")||"";
+  if(!key||messages.length<6)return null;
+  try{
+    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",max_tokens:300,messages:[{role:"system",content:"Compress this conversation into 5-8 bullet points. Capture emotional tone, key decisions, unresolved tensions, named facts. Ruthlessly concise. No preamble."},{role:"user",content:messages.map(m=>`${m.role}: ${m.content}`).join("\n")}]})});
+    const data=await res.json();
+    const summary=data.choices?.[0]?.message?.content||null;
+    if(summary){
+      const id="s_"+Date.now();
+      await dbPut("summaries",{id,charId,text:summary,created_at:Date.now(),type:"auto"});
+      showToast("Memory crystallised ◈");
+    }
+    return summary;
+  }catch(err){console.error("Summarise failed:",err);return null;}
+}
+
+async function saveManualMemory(charId,text){
+  if(!text||!charId)return;
+  await dbPut("summaries",{id:"sm_"+Date.now(),charId,text,created_at:Date.now(),type:"manual"});
+  showToast("Memory anchored ✦");
+}
+
+async function getMemoryContext(charId){
+  const all=await dbGetAll("summaries");
+  const mine=all.filter(s=>s.charId===charId).sort((a,b)=>b.created_at-a.created_at);
+  if(!mine.length)return null;
+  return mine.slice(0,3).map(s=>`[${s.type==="manual"?"ANCHORED":"MEMORY"}] ${s.text}`).join("\n\n");
+}
+
+async function openMemoryView(){
+  if(!activeCharId)return;
+  await renderMemoryView();
+  showPanel('view-memory');
+}
+
+async function renderMemoryView(){
+  const surface=document.getElementById('memory-surface');
+  surface.innerHTML='';
+  const all=await dbGetAll("summaries");
+  const mine=all.filter(s=>s.charId===activeCharId).sort((a,b)=>b.created_at-a.created_at);
+
+  if(!mine.length){
+    surface.innerHTML='<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">No memories yet</div></div>';
+    return;
+  }
+
+  const auto=mine.filter(s=>s.type==='auto');
+  const manual=mine.filter(s=>s.type==='manual');
+
+  function buildMemoryItem(s){
+    const div=document.createElement('div');
+    div.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;';
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:9px;letter-spacing:2px;color:var(--accent);font-weight:900;">${s.type==='manual'?'ANCHORED':'AUTO'}</span>
+        <span style="font-size:9px;color:var(--muted);">${new Date(s.created_at).toLocaleDateString()}</span>
+      </div>
+      <div style="font-size:13px;line-height:1.6;color:var(--text);font-family:Georgia,serif;">${escHtml(s.text)}</div>
+      <button onclick="deleteMemory('${s.id}')" style="margin-top:8px;background:none;border:1px solid var(--danger);color:#ff6060;font-size:10px;padding:4px 10px;border-radius:6px;font-weight:700;">✕ Remove</button>
+    `;
+    return div;
+  }
+
+  if(manual.length){
+    const l=document.createElement('div');l.className='cards-section-label';l.textContent='Anchored Memories';surface.appendChild(l);
+    manual.forEach(s=>surface.appendChild(buildMemoryItem(s)));
+  }
+  if(auto.length){
+    const l=document.createElement('div');l.className='cards-section-label';l.textContent='Auto Summaries';surface.appendChild(l);
+    auto.forEach(s=>surface.appendChild(buildMemoryItem(s)));
+  }
+}
+
+async function deleteMemory(id){
+  await dbDelete('summaries',id);
+  await renderMemoryView();
+  showToast('Memory removed');
+}
+
+async function addManualAnchor(){
+  const text=prompt("Anchor a memory:");
+  if(text&&text.trim()){
+    await saveManualMemory(activeCharId,text.trim());
+    await renderMemoryView();
+  }
+}
+
+
 async function callAIForChat(char,history,text){
-  const key=localStorage.getItem("nq_api_key")||"";if(!key){showToast("Add API Key in Settings");return null;}
-  const sys=`You are ${char.name}. ${char.role}. Personality: ${char.personality}. Backstory: ${char.backstory}. Lore: ${char.lorebook}. Scenario: ${char.scenario}. Inclination: ${char.inclination}. Relationships: ${char.relationships}. PC Info: ${char.pc_info}. Respond in character, concise and evocative.`;
-  const msgs=[{role:'system',content:sys},...history.slice(-10).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:text}];
+  const key=localStorage.getItem("nq_api_key")||"";
+  if(!key){showToast("Add API Key in Settings");return null;}
+
+  if(history.length>0&&history.length%15===0){
+    await summariseHistory(char.id,history.slice(-15));
+  }
+
+  const memoryContext=await getMemoryContext(char.id);
+  const memoryBlock=memoryContext?`\n\n[MEMORY FRAGMENTS]\n${memoryContext}`:"";
+
+  const sys=`You are ${char.name}. ${char.role}. Personality: ${char.personality}. Backstory: ${char.backstory}. Lore: ${char.lorebook}. Scenario: ${char.scenario}. Inclination: ${char.inclination}. Relationships: ${char.relationships}. PC Info: ${char.pc_info}. Respond in character, concise and evocative.${memoryBlock}`;
+
+  const msgs=[{role:'system',content:sys},...history.slice(-12).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:text}];
+
   try{
     const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",messages:msgs,temperature:char.temperature||1.0})});
-    const data=await res.json();return data.choices?.[0]?.message?.content||null;
+    const data=await res.json();
+    return data.choices?.[0]?.message?.content||null;
   }catch(err){console.error(err);showToast("AI call failed");return null;}
 }
+
 
 function appendChatMessage(role,text){
   const c=document.getElementById('chat-messages');const m=document.createElement('div');m.className=`chat-msg ${role==='user'?'user':'char'}`;m.textContent=text;c.appendChild(m);c.scrollTop=c.scrollHeight;
@@ -1442,6 +1560,11 @@ document.getElementById('search-input-sanctuary').addEventListener('input',e=>{s
   document.querySelectorAll('.forge-section-header').forEach(h=>{h.addEventListener('click',()=>{h.parentElement.classList.toggle('open');});});
 
   document.getElementById('btn-chat-back').addEventListener('click',()=>goBack());
+document.getElementById('btn-save-memory').addEventListener('click',()=>openMemoryView());
+
+document.getElementById('btn-memory-back').addEventListener('click',()=>{showPanel('view-chat');});
+document.getElementById('btn-add-manual-memory').addEventListener('click',addManualAnchor);
+
   document.getElementById('btn-chat-edit').addEventListener('click',()=>openCharacterForge(activeCharId));
   document.getElementById('btn-chat-clear').addEventListener('click',clearChatHistory);
   document.getElementById('btn-send').addEventListener('click',handleChatSend);
