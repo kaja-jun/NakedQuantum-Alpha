@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.12</title>
+<title>NakedQuantum v0.16</title>
 <style>
 :root {
   --bg: #000000;
@@ -653,6 +653,17 @@ select.cosm-input {
     <button class="modal-btn-confirm" id="btn-settings-confirm">Solidify</button>
   </div>
 </div>
+<div class="cosm-modal" id="burn-disc-modal">
+  <div class="modal-title">🔥 Burn Disc</div>
+  <div style="font-size:11px;color:var(--muted);">Character</div>
+  <select class="cosm-select" id="burn-char-select"></select>
+  <div style="font-size:11px;color:var(--muted);">Drop into folder</div>
+  <select class="cosm-select" id="burn-folder-select"></select>
+  <div class="modal-buttons">
+    <button class="modal-btn-cancel" id="btn-burn-cancel">Cancel</button>
+    <button class="modal-btn-confirm" id="btn-burn-confirm">Burn 🔥</button>
+  </div>
+</div>
 
 
 <div id="cosm-toast"></div>
@@ -790,6 +801,59 @@ async function handleSend() {
   }
 }
 
+/* BURN DISC */
+async function openBurnDiscModal(){
+  const chars=await getCharacters();
+  const active=chars.filter(c=>!c.isDeleted);
+  if(!active.length){showToast("No characters in Sanctuary");return;}
+  const charSel=document.getElementById('burn-char-select');
+  charSel.innerHTML='<option value="">— Choose character —</option>';
+  active.forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.id;o.textContent=c.name;
+    if(c.id===activeCharId)o.selected=true;
+    charSel.appendChild(o);
+  });
+  const folders=await getFolders();
+  const folderSel=document.getElementById('burn-folder-select');
+  folderSel.innerHTML='<option value="">◈ Use character name as folder</option>';
+  folders.forEach(f=>{
+    const o=document.createElement('option');
+    o.value=f.id;o.textContent=f.name;
+    folderSel.appendChild(o);
+  });
+  document.getElementById('burn-disc-modal').classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
+}
+
+async function confirmBurnDisc(){
+  const charId=document.getElementById('burn-char-select').value;
+  if(!charId){showToast("Choose a character first");return;}
+  const char=await getCharacter(charId);
+  const history=await dbGetByIndex('history','charId',charId);
+  if(!history.length){showToast("No chapters to burn");return;}
+  const lastBurn=parseInt(localStorage.getItem('lastBurn_'+charId)||'0');
+  const newMessages=history.filter(h=>(h.created_at||0)>lastBurn);
+  if(!newMessages.length){
+    showToast("No new chapters since last burn ◈");
+    closeOverlay();return;
+  }
+  const raw_text=newMessages.map(h=>
+    `**${h.role==='user'?'You':char.name}:** ${h.content}`
+  ).join('\n\n');
+  let folderId=document.getElementById('burn-folder-select').value||null;
+  if(!folderId){
+    const existing=(await getFolders()).find(f=>f.name===char.name);
+    folderId=existing?existing.id:await createFolder(char.name,null);
+  }
+  const date=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  const title=`${char.name} — ${date}`;
+  await createDiscourse({title,raw_text,folder_id:folderId});
+  localStorage.setItem('lastBurn_'+charId,Date.now().toString());
+  closeOverlay();
+  showToast(`🔥 Burned — ${newMessages.length} chapters`);
+}
+
 
 /* LONG PRESS WORDMARK */
 let wpt=null;
@@ -843,7 +907,9 @@ function updateFabMenu(mode){
   } else {
     html=`<button class="fab-item" id="fab-new-char">+ New Character</button><button class="fab-item" id="fab-open-forge">⚿ Character Forge</button>`;
   }
-  html += `<button class="fab-item" id="fab-settings">⏀ Settings</button>`;
+html += `<button class="fab-item" id="fab-burn-disc" style="color:#ff9060;">🔥 Burn Disc</button>`;
+html += `<button class="fab-item" id="fab-settings">⏀ Settings</button>`;
+
   menu.innerHTML = html;
   
   if(mode==='soup'){
@@ -854,6 +920,8 @@ function updateFabMenu(mode){
     document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
     document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
   }
+document.getElementById('fab-burn-disc').onclick=()=>{closeFab();openBurnDiscModal();};
+
   document.getElementById('fab-settings').onclick=()=>{closeFab();openSettingsModal();};
 }
 
@@ -1422,12 +1490,14 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
 });
 
 // Triple-check your closeOverlay function exists:
-function closeOverlay() {
-  const modal = document.getElementById('settings-modal');
-  const overlay = document.getElementById('cosm-overlay');
-  if(modal) modal.classList.remove('visible');
-  if(overlay) overlay.classList.remove('active');
+function closeOverlay(){
+  document.getElementById("cosm-overlay").classList.remove("active");
+  ['folder-modal','management-modal','rename-modal','move-modal',
+   'global-search-modal','capture-modal','settings-modal','burn-disc-modal']
+  .forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("visible");});
+  mgmtItem=null;
 }
+
 
 
 /* EDITOR */
@@ -1497,8 +1567,6 @@ function startLP(e,card,item){const touch=e.touches?e.touches[0]:e;touchStartPos
 function handleTM(e,card){if(!longPressTimer)return;const t=e.touches[0];if(Math.abs(t.clientX-touchStartPos.x)>MOVE_THRESHOLD||Math.abs(t.clientY-touchStartPos.y)>MOVE_THRESHOLD)cancelLP(card);}
 function cancelLP(card){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}isLongPress=false;if(card)card.classList.remove('long-pressing');}
 
-/* OVERLAY */
-function closeOverlay(){document.getElementById("cosm-overlay").classList.remove("active");['folder-modal','management-modal','rename-modal','move-modal','global-search-modal','capture-modal','settings-modal'].forEach(id=>document.getElementById(id).classList.remove("visible"));mgmtItem=null;}
 
 /* TOAST & UTILS */
 function showToast(msg){const t=document.getElementById("cosm-toast");t.textContent=msg;t.style.opacity="1";clearTimeout(t._timer);t._timer=setTimeout(()=>{t.style.opacity="0";},2200);}
@@ -1539,6 +1607,9 @@ document.addEventListener('DOMContentLoaded',()=> {
   document.getElementById('capture-title').addEventListener('input',function(){this.dataset.userEdited='true';});
     // --- CLEAN SETTINGS WIRING ---
   // Update your existing Confirm Listener
+document.getElementById('btn-burn-cancel').addEventListener('click',closeOverlay);
+document.getElementById('btn-burn-confirm').addEventListener('click',confirmBurnDisc);
+
 document.getElementById('btn-settings-confirm').addEventListener('click', () => {
   const k = document.getElementById('input-api-key').value.trim();
   const u = document.getElementById('input-base-url').value.trim();
