@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.16</title>
+<title>NakedQuantum v0.17</title>
 <style>
 :root {
   --bg: #000000;
@@ -515,6 +515,13 @@ select.cosm-input {
               <textarea class="forge-textarea" id="forge-pc-info" placeholder="Info about the player..."></textarea>
             </div>
             <div class="forge-input-group">
+<div class="forge-input-group">
+  <span class="forge-label">Your Role in this Encounter</span>
+  <select class="cosm-input" id="forge-persona-role">
+    <option value="">Default (global persona only)</option>
+  </select>
+</div>
+
               <span class="forge-label">Quantum Temperature</span>
               <div class="range-wrap">
                 <input type="range" class="range-input" id="forge-temp" min="0" max="2" step="0.1" value="1">
@@ -537,7 +544,9 @@ select.cosm-input {
     <div class="chat-char-info">
       <div class="chat-char-name" id="chat-char-name">Character Name</div>
     </div>
-    <button class="tbtn gold" id="btn-save-memory">◈ M</button>
+<div id="chat-persona-pill" style="font-size:9px;letter-spacing:1px;color:var(--accent-dim);border:1px solid var(--border);padding:3px 8px;border-radius:20px;cursor:pointer;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis;">⚝ default</div>
+
+    <button class="tbtn gold" id="btn-save-memory">⁕ M</button>
     <button class="tbtn" id="btn-chat-edit">✎</button>
     <button class="tbtn" id="btn-chat-clear">✕</button>
   </div>
@@ -556,6 +565,25 @@ select.cosm-input {
   </div>
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px 100px;">
     <div id="memory-surface"></div>
+  </div>
+</div>
+
+<div class="view-panel hidden" id="view-persona" style="background:var(--bg);display:flex;flex-direction:column;">
+  <div class="lighthouse-nav">
+    <button class="btn-back-table" id="btn-persona-back">← Sanctuary</button>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--accent);font-weight:900;">◈ PERSONA</div>
+    <button class="tbtn gold" id="btn-save-persona">Save</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px 100px;">
+    <div class="cards-section-label">Global Bio</div>
+    <textarea id="persona-bio" class="forge-textarea" placeholder="Who you are fundamentally..." style="min-height:120px;"></textarea>
+    <div class="cards-section-label" style="margin-top:16px;">Personality</div>
+    <textarea id="persona-personality" class="forge-textarea" placeholder="How you show up in encounters..." style="min-height:120px;"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;">
+      <div class="cards-section-label" style="margin:0;">Roles</div>
+      <button class="tbtn gold" id="btn-add-role">+ New Role</button>
+    </div>
+    <div id="roles-surface" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
 
@@ -665,6 +693,24 @@ select.cosm-input {
   </div>
 </div>
 
+<div class="cosm-modal" id="persona-select-modal">
+  <div class="modal-title">◈ Your Role Here</div>
+  <div class="management-actions" id="persona-select-list"></div>
+  <div class="modal-buttons">
+    <button class="modal-btn-cancel" id="btn-persona-select-cancel">Cancel</button>
+  </div>
+</div>
+
+
+<div class="cosm-modal" id="role-modal">
+  <div class="modal-title">◈ New Role</div>
+  <input class="cosm-input" id="role-name-input" placeholder="Role name (e.g. Philosopher, Young Kaja)..." maxlength="60">
+  <textarea class="cosm-input" id="role-desc-input" placeholder="Describe this role..." style="min-height:100px;resize:none;font-family:Georgia,serif;line-height:1.7;font-size:15px;"></textarea>
+  <div class="modal-buttons">
+    <button class="modal-btn-cancel" id="btn-role-cancel">Cancel</button>
+    <button class="modal-btn-confirm" id="btn-role-confirm">Anchor ✦</button>
+  </div>
+</div>
 
 <div id="cosm-toast"></div>
 
@@ -681,6 +727,21 @@ let cosmUserId=localStorage.getItem('cosm_user_id')||crypto.randomUUID();
 localStorage.setItem('cosm_user_id',cosmUserId);
 let longPressTimer=null,isLongPress=false,longPressConsumed=false,touchStartPos={x:0,y:0};
 const LONG_PRESS_DURATION=1000,MOVE_THRESHOLD=10;
+
+/* PERSONA */
+function getGlobalPersona(){
+  return JSON.parse(localStorage.getItem('nq_global_persona')||'{"bio":"","personality":""}');
+}
+function saveGlobalPersona(bio,personality){
+  localStorage.setItem('nq_global_persona',JSON.stringify({bio,personality}));
+}
+function getPersonaRoles(){
+  return JSON.parse(localStorage.getItem('nq_persona_roles')||'[]');
+}
+function savePersonaRoles(roles){
+  localStorage.setItem('nq_persona_roles',JSON.stringify(roles));
+}
+
 
 /* FIREFLY */
 class FF{constructor(){this.canvas=document.getElementById('firefly-canvas');this.ctx=this.canvas.getContext('2d');this.p=[];this.d=15;this.r();window.addEventListener('resize',()=>this.r());this.a();}r(){this.canvas.width=innerWidth;this.canvas.height=innerHeight;}sd(l){this.d=Math.min(60,15+Math.floor(l/200));}a(){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);while(this.p.length<this.d)this.p.push({x:Math.random()*this.canvas.width,y:Math.random()*this.canvas.height,s:Math.random()*1.5+.2,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,a:Math.random()*.4+.1,p:Math.random()*.01+.002});if(this.p.length>this.d)this.p.splice(this.d);this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.p;if(p.a>.6||p.a<.1)p.p*=-1;if(p.x<0)p.x=this.canvas.width;if(p.x>this.canvas.width)p.x=0;if(p.y<0)p.y=this.canvas.height;if(p.y>this.canvas.height)p.y=0;this.ctx.beginPath();this.ctx.arc(p.x,p.y,p.s,0,Math.PI*2);this.ctx.fillStyle=`rgba(200,160,80,${p.a})`;this.ctx.fill();});requestAnimationFrame(()=>this.a());}}
@@ -853,6 +914,70 @@ async function confirmBurnDisc(){
   closeOverlay();
   showToast(`🔥 Burned — ${newMessages.length} chapters`);
 }
+/* PERSONA FUNCTIONS */
+async function openPersonaView(){
+  const p=getGlobalPersona();
+  document.getElementById('persona-bio').value=p.bio||'';
+  document.getElementById('persona-personality').value=p.personality||'';
+  renderRoles();
+  showPanel('view-persona');
+}
+
+function renderRoles(){
+  const surface=document.getElementById('roles-surface');
+  surface.innerHTML='';
+  const roles=getPersonaRoles();
+  if(!roles.length){
+    surface.innerHTML='<div style="font-size:12px;color:var(--muted);padding:12px 0;">No roles yet. Create one.</div>';
+    return;
+  }
+  roles.forEach(r=>{
+    const div=document.createElement('div');
+    div.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;';
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;font-weight:900;color:var(--accent);">${escHtml(r.name)}</span>
+        <button onclick="deleteRole('${r.id}')" style="background:none;border:1px solid var(--danger);color:#ff6060;font-size:10px;padding:3px 8px;border-radius:6px;font-weight:700;">✕</button>
+      </div>
+      <div style="font-size:13px;color:var(--text);font-family:Georgia,serif;line-height:1.6;">${escHtml(r.description)}</div>
+    `;
+    surface.appendChild(div);
+  });
+}
+
+function deleteRole(id){
+  const roles=getPersonaRoles().filter(r=>r.id!==id);
+  savePersonaRoles(roles);
+  renderRoles();
+  showToast('Role removed');
+}
+
+function addNewRole(){
+  document.getElementById('role-name-input').value='';
+  document.getElementById('role-desc-input').value='';
+  document.getElementById('role-modal').classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
+}
+
+function confirmAddRole(){
+  const name=document.getElementById('role-name-input').value.trim();
+  const description=document.getElementById('role-desc-input').value.trim();
+  if(!name||!description){showToast('Fill both fields');return;}
+  const roles=getPersonaRoles();
+  roles.push({id:'r_'+Date.now(),name,description});
+  savePersonaRoles(roles);
+  renderRoles();
+  closeOverlay();
+  showToast('Role anchored ✦');
+}
+
+
+function savePersonaPage(){
+  const bio=document.getElementById('persona-bio').value.trim();
+  const personality=document.getElementById('persona-personality').value.trim();
+  saveGlobalPersona(bio,personality);
+  showToast('Persona solidified ◈');
+}
 
 
 /* LONG PRESS WORDMARK */
@@ -874,7 +999,7 @@ function switchAppMode(mode){
 
 /* SHOW PANEL (Unifying logic) */
 function showPanel(id){
-  const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat','view-memory'];
+ const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat','view-memory','view-persona'];
   panels.forEach(p=>{
     const el=document.getElementById(p);
     if(el)el.classList.add('hidden');
@@ -906,6 +1031,8 @@ function updateFabMenu(mode){
     html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡ Quick Capture</button>`;
   } else {
     html=`<button class="fab-item" id="fab-new-char">+ New Character</button><button class="fab-item" id="fab-open-forge">⚿ Character Forge</button>`;
+html+=`<button class="fab-item" id="fab-persona">◈ My Persona</button>`;
+
   }
 html += `<button class="fab-item" id="fab-burn-disc" style="color:#ff9060;">🔥 Burn Disc</button>`;
 html += `<button class="fab-item" id="fab-settings">⏀ Settings</button>`;
@@ -919,6 +1046,8 @@ html += `<button class="fab-item" id="fab-settings">⏀ Settings</button>`;
   } else {
     document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
     document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
+document.getElementById('fab-persona').onclick=()=>{closeFab();openPersonaView();};
+
   }
 document.getElementById('fab-burn-disc').onclick=()=>{closeFab();openBurnDiscModal();};
 
@@ -1112,6 +1241,16 @@ async function openCharacterForge(id){
   document.getElementById('forge-temp').value=c.temperature||1;
   document.getElementById('forge-temp-val').textContent=Number(c.temperature||1).toFixed(1);
   showPanel('view-forge');
+const roles=getPersonaRoles();
+const roleSel=document.getElementById('forge-persona-role');
+roleSel.innerHTML='<option value="">Default (global persona only)</option>';
+roles.forEach(r=>{
+  const o=document.createElement('option');
+  o.value=r.id;o.textContent=r.name;
+  if(r.id===c.player_role_id)o.selected=true;
+  roleSel.appendChild(o);
+});
+
 }
 
 async function saveCharacterForge(){
@@ -1125,7 +1264,10 @@ async function saveCharacterForge(){
     inclination:document.getElementById('forge-inclination').value,
     relationships:document.getElementById('forge-relationships').value,
     pc_info:document.getElementById('forge-pc-info').value,
-    temperature:parseFloat(document.getElementById('forge-temp').value)
+
+player_role_id: document.getElementById('forge-persona-role').value||null,
+
+temperature:parseFloat(document.getElementById('forge-temp').value)
   };
   if(activeCharId)await updateCharacter(activeCharId,data);
   else await createCharacter(data);
@@ -1147,6 +1289,9 @@ async function openChat(id){
   const history=await dbGetByIndex('history','charId',id);
   history.forEach(h=>appendChatMessage(h.role,h.content));
   showPanel('view-chat');
+chatPersonaOverride=char.player_role_id||null;
+updatePersonaPill();
+
 }
 
 async function handleChatSend(){
@@ -1256,6 +1401,54 @@ async function addManualAnchor(){
   }
 }
 
+let chatPersonaOverride=null;
+
+function updatePersonaPill(){
+  const pill=document.getElementById('chat-persona-pill');
+  if(!pill)return;
+  if(chatPersonaOverride){
+    const roles=getPersonaRoles();
+    const r=roles.find(r=>r.id===chatPersonaOverride);
+    pill.textContent=r?'◈ '+r.name:'◈ default';
+    pill.style.borderColor='var(--accent-dim)';
+    pill.style.color='var(--accent)';
+  } else {
+    pill.textContent='◈ default';
+    pill.style.borderColor='var(--border)';
+    pill.style.color='var(--muted)';
+  }
+}
+
+function openPersonaPillSelector(){
+  const roles=getPersonaRoles();
+  if(!roles.length){showToast('No roles yet — create in Persona page');return;}
+  const modal=document.getElementById('persona-select-modal');
+  const list=document.getElementById('persona-select-list');
+  list.innerHTML='';
+  const defBtn=document.createElement('button');
+  defBtn.className='management-btn';
+  defBtn.innerHTML='<span>◈</span> Default (global only)';
+  defBtn.addEventListener('click',()=>{
+    chatPersonaOverride=null;
+    updatePersonaPill();
+    closeOverlay();
+  });
+  list.appendChild(defBtn);
+  roles.forEach(r=>{
+    const btn=document.createElement('button');
+    btn.className='management-btn'+(chatPersonaOverride===r.id?' gold':'');
+    btn.innerHTML=`<span>◈</span> ${escHtml(r.name)}`;
+    btn.addEventListener('click',()=>{
+      chatPersonaOverride=r.id;
+      updatePersonaPill();
+      closeOverlay();
+    });
+    list.appendChild(btn);
+  });
+  modal.classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
+}
+
 
 async function callAIForChat(char,history,text){
   const key=localStorage.getItem("nq_api_key")||"";
@@ -1268,7 +1461,21 @@ async function callAIForChat(char,history,text){
   const memoryContext=await getMemoryContext(char.id);
   const memoryBlock=memoryContext?`\n\n[MEMORY FRAGMENTS]\n${memoryContext}`:"";
 
-  const sys=`You are ${char.name}. ${char.role}. Personality: ${char.personality}. Backstory: ${char.backstory}. Lore: ${char.lorebook}. Scenario: ${char.scenario}. Inclination: ${char.inclination}. Relationships: ${char.relationships}. PC Info: ${char.pc_info}. Respond in character, concise and evocative.${memoryBlock}`;
+  const p=getGlobalPersona();
+const roles=getPersonaRoles();
+const roleId=chatPersonaOverride||char.player_role_id||null;
+const assignedRole=roleId?roles.find(r=>r.id===roleId):null;
+
+const personaBlock=`\n\nPlayer is ${p.bio||'the user'}. ${p.personality?'Personality: '+p.personality+'.':''} ${assignedRole?'In this encounter they are: '+assignedRole.description+'.':''}`;
+
+const sys=`You are ${char.name}. ${char.role}.
+Personality: ${char.personality}.
+Backstory: ${char.backstory}.
+Lore: ${char.lorebook}.
+Scenario: ${char.scenario}.
+Inclination: ${char.inclination}.
+Relationships: ${char.relationships}.
+Respond in character, concise and evocative.${personaBlock}${memoryBlock}`;
 
   const msgs=[{role:'system',content:sys},...history.slice(-12).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:text}];
 
@@ -1493,7 +1700,10 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
 function closeOverlay(){
   document.getElementById("cosm-overlay").classList.remove("active");
   ['folder-modal','management-modal','rename-modal','move-modal',
-   'global-search-modal','capture-modal','settings-modal','burn-disc-modal']
+ 'global-search-modal','capture-modal','settings-modal',
+ 'burn-disc-modal','role-modal','persona-select-modal'
+]
+
   .forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("visible");});
   mgmtItem=null;
 }
@@ -1627,7 +1837,15 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
 document.getElementById('search-input-sanctuary').addEventListener('input',e=>{sanctuarySearchQuery=e.target.value.toLowerCase();renderSanctuaryView();});
   document.getElementById('btn-forge-save').addEventListener('click',saveCharacterForge);
   document.getElementById('btn-forge-close').addEventListener('click',closeCharacterForge);
-  document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
+document.getElementById('btn-role-cancel').addEventListener('click',closeOverlay);
+document.getElementById('btn-role-confirm').addEventListener('click',confirmAddRole);
+  document.getElementById('btn-persona-back').addEventListener('click',()=>showPanel('view-sanctuary'));
+document.getElementById('btn-save-persona').addEventListener('click',savePersonaPage);
+document.getElementById('btn-add-role').addEventListener('click',addNewRole);
+document.getElementById('chat-persona-pill').addEventListener('click',openPersonaPillSelector);
+document.getElementById('btn-persona-select-cancel').addEventListener('click',closeOverlay);
+
+document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
   document.querySelectorAll('.forge-section-header').forEach(h=>{h.addEventListener('click',()=>{h.parentElement.classList.toggle('open');});});
 
   document.getElementById('btn-chat-back').addEventListener('click',()=>goBack());
