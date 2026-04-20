@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.17</title>
+<title>NakedQuantum v0.18</title>
 <style>
 :root {
   --bg: #000000;
@@ -87,7 +87,8 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .badge-mosaic { font-size: 11px; color: var(--accent); opacity: 0.7; }
 .badge-pinned { font-size: 9px; color: var(--accent-dim); opacity: 0.6; letter-spacing: 0.5px; }
 
-.table-surface { flex: 1; padding: 0 16px 100px; }
+.table-surface { flex: 1; padding: 0 16px 140px; }
+
 .search-bar-wrap { padding: 8px 16px 4px; flex-shrink: 0; }
 .search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 9px 14px; border-radius: 10px; font-size: 14px; outline: none; caret-color: var(--accent); }
 .search-input:focus { border-color: var(--accent-dim); }
@@ -357,7 +358,23 @@ select.cosm-input {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 @media (max-width: 480px) { .lighthouse-tools { gap: 4px; } .tbtn { padding: 7px 8px; font-size: 10px; } .view-toggle-btn { padding: 6px 9px; } .cards-grid { gap: 8px; } .lighthouse-scroll { padding: 20px 14px 60px; } }
+
+/* BOTTOM ACTION BAR */
+.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10,10,10,0.95); border-top: 1px solid var(--border); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 700; padding: 8px 0 24px; display: none; }
+.bottom-bar.visible { display: block; }
+.bottom-bar-scroll { display: flex; flex-direction: row; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 0 16px; gap: 8px; }
+.bottom-bar-scroll::-webkit-scrollbar { display: none; }
+.bar-pill { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 64px; padding: 8px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); cursor: pointer; flex-shrink: 0; transition: background 0.15s, border-color 0.15s; }
+.bar-pill:active { background: var(--surface2); border-color: var(--accent-dim); }
+.bar-pill-icon { font-size: 18px; line-height: 1; }
+.bar-pill-label { font-size: 9px; letter-spacing: 1px; color: var(--muted); font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+.bar-pill.gold .bar-pill-label { color: var(--accent); }
+.bar-pill.gold { border-color: var(--accent-dim); }
+.bar-pill.danger .bar-pill-label { color: #ff6060; }
+.bar-pill.danger { border-color: var(--danger); }
+
 </style>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
 </head>
 <body>
 <canvas id="firefly-canvas"></canvas>
@@ -396,6 +413,7 @@ select.cosm-input {
           <button class="view-toggle-btn active" id="btn-write">Write</button>
           <button class="view-toggle-btn" id="btn-view">View</button>
         </div>
+<button class="tbtn" id="btn-export-docx">DOC ↓</button>
         <button class="tbtn" id="btn-export-md">MD ↓</button>
         <button class="tbtn" id="btn-export-pdf">PDF ↓</button>
         <button class="tbtn gold" id="btn-extract">◈</button>
@@ -587,12 +605,6 @@ select.cosm-input {
   </div>
 </div>
 
-
-<div class="fab-container" id="fab-container">
-  <div class="fab-menu" id="fab-menu"></div>
-  <button class="fab-main" id="fab-main">+</button>
-</div>
-
 <div class="cosm-overlay" id="cosm-overlay"></div>
 
 <div class="cosm-modal" id="folder-modal">
@@ -603,16 +615,6 @@ select.cosm-input {
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-folder-cancel">Cancel</button>
     <button class="modal-btn-confirm" id="btn-folder-confirm">Create</button>
-  </div>
-</div>
-
-<div class="cosm-modal" id="management-modal">
-  <div class="modal-title" id="management-title">Manage</div>
-  <div class="management-actions">
-    <button class="management-btn" id="btn-mgmt-rename"><span>✎</span> Rename</button>
-    <button class="management-btn" id="btn-mgmt-move"><span>▤</span> Move</button>
-    <button class="management-btn export" id="btn-mgmt-export"><span>↓</span> Export</button>
-    <button class="management-btn danger" id="btn-mgmt-delete"><span>✕</span> Delete</button>
   </div>
 </div>
 
@@ -720,7 +722,7 @@ document.addEventListener('touchstart',()=>{},{passive:true});
 /* STATE */
 let db=null,currentMode='soup',currentDiscourseId=null,currentFolderId=null,
     breadcrumbPath=[{id:null,name:'◈  The soup'}],editorMode='write',currentView='table',
-    fabOpen=false,mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
+    mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
 const AKASHIC_URL='https://wandering-violet-964a.gazajar.workers.dev';
 
 let cosmUserId=localStorage.getItem('cosm_user_id')||crypto.randomUUID();
@@ -800,7 +802,11 @@ async function deleteMosaicTile(dId){const t=await getMosaicTile(dId);if(t)await
 async function getBacklink(dId){const l=await dbGetByIndex("cosm_backlinks","discourse_id",dId);return l.length>0?l[0]:null;}
 
 /* INIT */
-async function init(){updateHeaderButtons();updateFabMenu(currentMode);await renderTableView();document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';}
+async function init(){updateHeaderButtons();
+renderDefaultBar(currentMode);
+await renderTableView();
+document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';
+document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';}
 
 /*Naked Handle*/
 
@@ -979,6 +985,43 @@ function savePersonaPage(){
   showToast('Persona solidified ◈');
 }
 
+/* BOTTOM BAR */
+function showBottomBar(pills){
+  const scroll=document.getElementById('bottom-bar-scroll');
+  scroll.innerHTML='';
+  pills.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='bar-pill'+(p.style?' '+p.style:'');
+    div.innerHTML=`<span class="bar-pill-icon">${p.icon}</span><span class="bar-pill-label">${p.label}</span>`;
+    div.addEventListener('click',p.action);
+    scroll.appendChild(div);
+  });
+  document.getElementById('bottom-bar').classList.add('visible');
+}
+
+function hideBottomBar(){
+  document.getElementById('bottom-bar').classList.remove('visible');
+}
+
+function renderDefaultBar(mode){
+  if(mode==='soup'){
+    showBottomBar([
+      {icon:'▤',label:'Folder',action:()=>openFolderModal()},
+      {icon:'✦',label:'Discourse',action:()=>handleNewDiscourse()},
+      {icon:'⚡',label:'Capture',action:()=>openQuickCapture(),style:'gold'},
+      {icon:'🔥',label:'Burn Disc',action:()=>openBurnDiscModal()},
+    ]);
+  } else {
+    showBottomBar([
+      {icon:'+',label:'Character',action:()=>handleNewCharacter()},
+      {icon:'⚿',label:'Forge',action:()=>openCharacterForge()},
+      {icon:'◈',label:'Persona',action:()=>openPersonaView(),style:'gold'},
+      {icon:'🔥',label:'Burn Disc',action:()=>openBurnDiscModal()},
+      {icon:'⏀',label:'Settings',action:()=>openSettingsModal()},
+    ]);
+  }
+}
+
 
 /* LONG PRESS WORDMARK */
 let wpt=null;
@@ -994,12 +1037,13 @@ function switchAppMode(mode){
   if(mode==='soup'){showPanel('view-soup');mt.textContent='✦ THE SOUP';}
   else{showPanel('view-sanctuary');mt.textContent='◈ THE SANCTUARY';renderSanctuaryView();}
   mt.style.opacity='1';setTimeout(()=>{mt.style.opacity='0';},1500);
-  updateHeaderButtons();updateFabMenu(mode);
+updateHeaderButtons();
+renderDefaultBar(mode);
 }
 
 /* SHOW PANEL (Unifying logic) */
 function showPanel(id){
- const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat','view-memory','view-persona'];
+  const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat','view-memory','view-persona'];
   panels.forEach(p=>{
     const el=document.getElementById(p);
     if(el)el.classList.add('hidden');
@@ -1007,10 +1051,15 @@ function showPanel(id){
   const active=document.getElementById(id);
   if(active)active.classList.remove('hidden');
   currentView=id.replace('view-','');
-  const fab=document.getElementById('fab-container');
-  if(fab)fab.style.display=(id==='view-soup'||id==='view-sanctuary')?'flex':'none';
+  
+  // Show bottom bar only on main views
+  if(id==='view-soup'){renderDefaultBar('soup');}
+  else if(id==='view-sanctuary'){renderDefaultBar('sanctuary');}
+  else{hideBottomBar();}
+  
   firefly.sd(id==='view-lighthouse'||id==='view-chat'?80:20);
 }
+
 
 /* HEADER BUTTONS */
 function updateHeaderButtons(){
@@ -1021,37 +1070,6 @@ function updateHeaderButtons(){
   document.getElementById('import-json-input').onchange=e=>importJSON(e);
   document.getElementById('hdr-sync').onclick=()=>{showToast('Syncing with Akashic...');restoreFromAkashic();};
   document.getElementById('hdr-search').onclick=()=>openGlobalSearch();
-}
-
-/* FAB MENU */
-function updateFabMenu(mode){
-  const menu=document.getElementById('fab-menu');
-  let html = '';
-  if(mode==='soup'){
-    html=`<button class="fab-item" id="fab-new-folder">▤ New Folder</button><button class="fab-item" id="fab-new-discourse-fab">✦ New Discourse</button><button class="fab-item" id="fab-quick-capture" style="color:#a0d8a0;">⚡ Quick Capture</button>`;
-  } else {
-    html=`<button class="fab-item" id="fab-new-char">+ New Character</button><button class="fab-item" id="fab-open-forge">⚿ Character Forge</button>`;
-html+=`<button class="fab-item" id="fab-persona">◈ My Persona</button>`;
-
-  }
-html += `<button class="fab-item" id="fab-burn-disc" style="color:#ff9060;">🔥 Burn Disc</button>`;
-html += `<button class="fab-item" id="fab-settings">⏀ Settings</button>`;
-
-  menu.innerHTML = html;
-  
-  if(mode==='soup'){
-    document.getElementById('fab-new-folder').onclick=()=>{closeFab();openFolderModal();};
-    document.getElementById('fab-new-discourse-fab').onclick=()=>{closeFab();handleNewDiscourse();};
-    document.getElementById('fab-quick-capture').onclick=()=>{closeFab();openQuickCapture();};
-  } else {
-    document.getElementById('fab-new-char').onclick=()=>{closeFab();handleNewCharacter();};
-    document.getElementById('fab-open-forge').onclick=()=>{closeFab();openCharacterForge();};
-document.getElementById('fab-persona').onclick=()=>{closeFab();openPersonaView();};
-
-  }
-document.getElementById('fab-burn-disc').onclick=()=>{closeFab();openBurnDiscModal();};
-
-  document.getElementById('fab-settings').onclick=()=>{closeFab();openSettingsModal();};
 }
 
 async function goBack(){
@@ -1538,10 +1556,6 @@ async function onGlobalSearchInput(query){
   re.querySelectorAll('.global-search-result').forEach(el=>{el.addEventListener('click',()=>{const type=el.dataset.type,id=el.dataset.id;closeGlobalSearch();if(type==='folder')enterFolder(id,fm.get(id)?.name||'Folder');else if(type==='character')openChat(id);else openDiscourse(id);});});
 }
 
-/* FAB */
-function toggleFab(){fabOpen=!fabOpen;document.getElementById('fab-menu').classList.toggle('open',fabOpen);document.getElementById('fab-main').classList.toggle('open',fabOpen);}
-function closeFab(){fabOpen=false;document.getElementById('fab-menu').classList.remove('open');document.getElementById('fab-main').classList.remove('open');}
-
 /* FOLDER MODAL */
 async function openFolderModal(){
   const sel=document.getElementById("folder-parent-select");sel.innerHTML='<option value="">The Soup</option>';
@@ -1556,12 +1570,25 @@ async function confirmNewFolder(){
 }
 
 /* MANAGEMENT */
-function openManagementModal(item){document.getElementById("management-title").textContent=item.name||(item.type==='folder'?'Folder':'Discourse');document.getElementById("management-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");}
-function closeManagementModal(co=true){document.getElementById("management-modal").classList.remove("visible");if(co)closeOverlay();}
-async function handleMgmtExport(){if(!mgmtItem)return;const item=mgmtItem;closeManagementModal();if(item.type==='discourse')await exportDiscourseMarkdown(item.id);else if(item.type==='folder')await exportFolderContents(item.id);else showToast("Export not available for this item");}
+function openManagementModal(item){
+  mgmtItem=item;
+  const pills=[
+    {icon:'✎',label:'Rename',action:()=>{resetToDefaultBar();openRenameModal();}},
+    {icon:'▤',label:'Move',action:()=>{resetToDefaultBar();openMoveModal();}},
+    {icon:'↓',label:'Export',action:()=>{resetToDefaultBar();handleMgmtExport();},style:'gold'},
+    {icon:'◈',label:'Select',action:()=>enterSelectMode(item)},
+    {icon:'✕',label:'Delete',action:()=>{resetToDefaultBar();handleMgmtDelete();},style:'danger'},
+  ];
+  showBottomBar(pills);
+}
+
+function resetToDefaultBar(){
+  mgmtItem=null;
+  renderDefaultBar(currentMode);
+}
 
 async function handleMgmtDelete(){
-  if(!mgmtItem)return;const item=mgmtItem;closeManagementModal();
+  if(!mgmtItem)return;const item=mgmtItem;
   if(item.type==='folder'){if(!confirm(`Delete folder "${item.name}"?`))return;await deleteFolder(item.id);if(currentFolderId===item.id){breadcrumbPath.pop();currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;}await renderTableView();showToast("Folder deleted");}
   else if(item.type==='character'){if(!confirm(`Delete character "${item.name}"?`))return;await deleteCharacter(item.id);await renderSanctuaryView();showToast("Character moved to Void");}
   else{if(!confirm(`Move "${item.name}" to the Void?`))return;await deleteDiscourse(item.id);await renderTableView();showToast("Moved to Void ◌");}
@@ -1570,6 +1597,7 @@ async function handleMgmtDelete(){
 /* RENAME */
 function openRenameModal(){if(!mgmtItem)return;document.getElementById("rename-title").textContent=mgmtItem.type==='folder'?'Rename Folder':'Rename Discourse';document.getElementById("rename-input").value=mgmtItem.name||'';document.getElementById("rename-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");setTimeout(()=>document.getElementById("rename-input").focus(),100);}
 function closeRenameModal(){document.getElementById("rename-modal").classList.remove("visible");closeOverlay();}
+
 async function confirmRename(){if(!mgmtItem)return;const n=document.getElementById("rename-input").value.trim();if(!n)return;if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});else if(mgmtItem.type==='character'){await updateCharacter(mgmtItem.id,{name:n});renderSanctuaryView();}else await updateDiscourse(mgmtItem.id,{title:n});closeRenameModal();await renderTableView();mgmtItem=null;showToast("Renamed");}
 
 /* MOVE */
@@ -1579,6 +1607,7 @@ async function openMoveModal(){
   for(const f of vf){const o=document.createElement('option');o.value=f.id;o.textContent=f.name;const cp=mgmtItem.type==='folder'?mgmtItem.data.parent_id:mgmtItem.data.folder_id;if(f.id===cp)o.selected=true;sel.appendChild(o);}
   document.getElementById("move-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");
 }
+
 function closeMoveModal(){document.getElementById("move-modal").classList.remove("visible");closeOverlay();}
 async function confirmMove(){
   if(!mgmtItem)return;const np=document.getElementById("move-parent-select").value||null;
@@ -1699,7 +1728,7 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
 // Triple-check your closeOverlay function exists:
 function closeOverlay(){
   document.getElementById("cosm-overlay").classList.remove("active");
-  ['folder-modal','management-modal','rename-modal','move-modal',
+  ['folder-modal','rename-modal','move-modal',
  'global-search-modal','capture-modal','settings-modal',
  'burn-disc-modal','role-modal','persona-select-modal'
 ]
@@ -1746,6 +1775,29 @@ function renderContent(raw){
   t=t.replace(/<p><\/p>/g,'');t=t.replace(/<p>%%[A-Z0-9]+%%<\/p>/g,m=>m.slice(3,-4));return t;
 }
 
+async function exportDocx(){
+  if(!currentDiscourseId)return;
+  await saveCurrentDiscourse(true);
+  const d=await getDiscourse(currentDiscourseId);
+  if(!d)return;
+  const {Document,Packer,Paragraph,TextRun,HeadingLevel}=docx;
+  const lines=(d.raw_text||'').split('\n');
+  const children=[
+    new Paragraph({heading:HeadingLevel.HEADING_1,children:[new TextRun(d.title||'Untitled')]}),
+    new Paragraph({children:[new TextRun(new Date(d.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}))]}),
+    new Paragraph({children:[new TextRun('')]}),
+    ...lines.map(l=>new Paragraph({children:[new TextRun(l||'')]}))
+  ];
+  const doc=new Document({sections:[{children}]});
+  const blob=await Packer.toBlob(doc);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`${(d.title||'discourse').replace(/[^a-z0-9]/gi,'_').toLowerCase()}.docx`;
+  a.click();URL.revokeObjectURL(url);
+  showToast('Exported as Word ✓');
+}
+
+
 /* EXPORTS */
 async function exportMarkdown(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported as Markdown");}
 async function exportPDF(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let mh="";if(tile&&tile.anchors&&tile.anchors.length)mh=`<div style="border-left:3px solid #c8a050;padding:10px 16px;margin:16px 0;background:#f9f5ee;"><div style="font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:8px;color:#8a6e35;">◈ MOSAIC</div>${tile.anchors.map(a=>`<div style="margin:4px 0;">• ${escHtml(a)}</div>`).join('')}</div>`;const content=renderContent(d.raw_text||"");const fh=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(d.title||"Discourse")}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:0 auto;padding:20px;color:#1a1a1a;line-height:1.8;}h1{font-size:26px;border-bottom:1px solid #ddd;padding-bottom:10px;margin-bottom:6px;}.meta{font-size:12px;color:#888;margin-bottom:24px;}h2{font-size:20px;}h3{font-size:16px;color:#555;}pre{background:#f4f4f4;padding:14px;border-radius:6px;overflow-x:auto;}code{font-family:monospace;font-size:13px;}blockquote{border-left:3px solid #ccc;padding-left:14px;color:#666;font-style:italic;margin:12px 0;}</style></head><body><h1>${escHtml(d.title||"Untitled")}</h1><div class="meta">${new Date(d.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</div>${mh}${content}</body></html>`;const iframe=document.createElement('iframe');iframe.style.cssText='position:absolute;width:0;height:0;border:none;';document.body.appendChild(iframe);const doc=iframe.contentWindow.document;doc.open();doc.write(fh);doc.close();setTimeout(()=>{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(()=>document.body.removeChild(iframe),10000);},500);}
@@ -1775,7 +1827,13 @@ async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will ov
 /* LONG PRESS */
 function startLP(e,card,item){const touch=e.touches?e.touches[0]:e;touchStartPos={x:touch.clientX,y:touch.clientY};isLongPress=false;longPressConsumed=false;card.classList.add('long-pressing');longPressTimer=setTimeout(()=>{isLongPress=true;longPressConsumed=true;card.classList.remove('long-pressing');mgmtItem=item;openManagementModal(item);},LONG_PRESS_DURATION);}
 function handleTM(e,card){if(!longPressTimer)return;const t=e.touches[0];if(Math.abs(t.clientX-touchStartPos.x)>MOVE_THRESHOLD||Math.abs(t.clientY-touchStartPos.y)>MOVE_THRESHOLD)cancelLP(card);}
-function cancelLP(card){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}isLongPress=false;if(card)card.classList.remove('long-pressing');}
+
+function cancelLP(card){
+  if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}
+  isLongPress=false;
+  longPressConsumed=false;
+  if(card)card.classList.remove('long-pressing');
+}
 
 
 /* TOAST & UTILS */
@@ -1784,12 +1842,12 @@ function escHtml(str){if(!str)return"";return String(str).replace(/&/g,"&amp;").
 
 /* EVENT BINDING */
 document.addEventListener('DOMContentLoaded',()=> {
-  document.getElementById('fab-main').addEventListener('click',toggleFab);
   document.getElementById('btn-close-void').addEventListener('click',()=>goBack());
   document.getElementById('btn-purge-all').addEventListener('click',purgeAll);
   document.getElementById('btn-back-table').addEventListener('click',()=>goBack());
   document.getElementById('btn-write').addEventListener('click',()=>setEditorMode('write'));
   document.getElementById('btn-view').addEventListener('click',()=>setEditorMode('view'));
+document.getElementById('btn-export-docx').addEventListener('click',exportDocx);
   document.getElementById('btn-export-md').addEventListener('click',exportMarkdown);
   document.getElementById('btn-export-pdf').addEventListener('click',exportPDF);
   document.getElementById('btn-extract').addEventListener('click',extractMemory);
@@ -1800,10 +1858,16 @@ document.addEventListener('DOMContentLoaded',()=> {
   document.getElementById('search-input').addEventListener('input',e=>onSearchInput(e.target.value));
   document.getElementById('discourse-title').addEventListener('blur',()=>{if(currentDiscourseId&&currentView==='lighthouse')saveCurrentDiscourse(true);});
   document.getElementById('content-textarea').addEventListener('paste',function(e){const h=e.clipboardData&&e.clipboardData.getData('text/html');if(h){e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));}});
-  document.getElementById('btn-mgmt-rename').addEventListener('click',e=>{e.stopPropagation();closeManagementModal(false);openRenameModal();});
-  document.getElementById('btn-mgmt-move').addEventListener('click',e=>{e.stopPropagation();closeManagementModal(false);openMoveModal();});
-  document.getElementById('btn-mgmt-export').addEventListener('click',e=>{e.stopPropagation();handleMgmtExport();});
-  document.getElementById('btn-mgmt-delete').addEventListener('click',e=>{e.stopPropagation();handleMgmtDelete();});
+
+document.addEventListener('click',e=>{
+  if(mgmtItem){
+    const bar=document.getElementById('bottom-bar');
+    if(bar&&!bar.contains(e.target)){
+      resetToDefaultBar();
+    }
+  }
+});
+
   document.getElementById('btn-rename-cancel').addEventListener('click',closeRenameModal);
   document.getElementById('btn-rename-confirm').addEventListener('click',confirmRename);
   document.getElementById('btn-move-cancel').addEventListener('click',closeMoveModal);
@@ -1866,11 +1930,6 @@ document.getElementById('btn-add-manual-memory').addEventListener('click',addMan
       if(el) el.addEventListener('click',()=>applyFormat(fmtMap[id]));
   });
 
-  document.addEventListener('click',e=>{
-    const fabC=document.getElementById('fab-container');
-    if(fabOpen && fabC && !fabC.contains(e.target)) closeFab();
-  });
-
   document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goBack();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
 });
 
@@ -1878,5 +1937,9 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 
 window.cosmOSPinDisc=async function({title,raw_text,source_link,backlink}){const disc=await createDiscourse({title,raw_text,source_link:JSON.stringify(source_link)});if(backlink){const blId="bl_"+Date.now();await dbPut("cosm_backlinks",{id:blId,discourse_id:disc.id,...backlink,created_at:Date.now()});}return disc.id;};
 </script>
+<div class="bottom-bar" id="bottom-bar">
+  <div class="bottom-bar-scroll" id="bottom-bar-scroll"></div>
+</div>
+
 </body>
 </html>
