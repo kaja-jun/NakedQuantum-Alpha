@@ -1,2 +1,2 @@
-# NakedQuantum_Alpha
-Alpha testing phase
+# NakedQuantum_Beta
+Beta testing phase
