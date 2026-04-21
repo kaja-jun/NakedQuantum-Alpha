@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.18</title>
+<title>NakedQuantum v0.17</title>
 <style>
 :root {
   --bg: #000000;
@@ -63,7 +63,9 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (min-width: 540px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
 .card:last-child:nth-child(odd) { grid-column: span 2; }
-.folder-card, .discourse-card { user-select: none; -webkit-user-select: none; }
+.folder-card, .discourse-card, .character-card { user-select: none; -webkit-user-select: none; }
+.card-selected { border-color: var(--accent) !important; background: rgba(200,160,80,0.08) !important; }
+
 
 .folder-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 14px 12px; cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.18s, background 0.18s; min-height: 90px; display: flex; flex-direction: column; justify-content: space-between; }
 .folder-card.long-pressing { background: var(--surface2); border-color: var(--accent); transform: scale(0.98); }
@@ -454,9 +456,11 @@ select.cosm-input {
   </div>
 
   <div class="view-panel sanctuary-view hidden" id="view-sanctuary">
-    <div class="search-bar-wrap">
-      <input class="search-input" id="search-input-sanctuary" placeholder="Search characters...">
-    </div>
+  <div class="breadcrumb-bar" id="sanctuary-breadcrumb-bar">
+  <div class="breadcrumb-seg">
+    <button class="breadcrumb-btn current">◈ The Sanctuary</button>
+  </div>
+</div>
     <div class="table-surface" id="sanctuary-surface"></div>
   </div>
 
@@ -720,6 +724,7 @@ select.cosm-input {
 document.addEventListener('touchstart',()=>{},{passive:true});
 
 /* STATE */
+
 let db=null,currentMode='soup',currentDiscourseId=null,currentFolderId=null,
     breadcrumbPath=[{id:null,name:'◈  The soup'}],editorMode='write',currentView='table',
     mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
@@ -729,6 +734,9 @@ let cosmUserId=localStorage.getItem('cosm_user_id')||crypto.randomUUID();
 localStorage.setItem('cosm_user_id',cosmUserId);
 let longPressTimer=null,isLongPress=false,longPressConsumed=false,touchStartPos={x:0,y:0};
 const LONG_PRESS_DURATION=1000,MOVE_THRESHOLD=10;
+
+let selectMode=false, selectedItems=new Set();
+
 
 /* PERSONA */
 function getGlobalPersona(){
@@ -1008,18 +1016,118 @@ function renderDefaultBar(mode){
     showBottomBar([
       {icon:'▤',label:'Folder',action:()=>openFolderModal()},
       {icon:'✦',label:'Discourse',action:()=>handleNewDiscourse()},
-      {icon:'⚡',label:'Capture',action:()=>openQuickCapture(),style:'gold'},
+      {icon:'⚡',label:'Capture',action:()=>openQuickCapture()},
       {icon:'🔥',label:'Burn Disc',action:()=>openBurnDiscModal()},
     ]);
   } else {
     showBottomBar([
       {icon:'+',label:'Character',action:()=>handleNewCharacter()},
       {icon:'⚿',label:'Forge',action:()=>openCharacterForge()},
-      {icon:'◈',label:'Persona',action:()=>openPersonaView(),style:'gold'},
+      {icon:'◈',label:'Persona',action:()=>openPersonaView()},
       {icon:'🔥',label:'Burn Disc',action:()=>openBurnDiscModal()},
       {icon:'⏀',label:'Settings',action:()=>openSettingsModal()},
     ]);
   }
+}
+
+function enterSelectMode(item){
+  selectMode=true;
+  selectedItems=new Set();
+  selectedItems.add(item.id);
+  // Render after population
+  if(currentMode==='soup') renderTableView().then(()=>renderSelectBar());
+  else renderSanctuaryView().then(()=>renderSelectBar());
+}
+
+
+function renderSelectBar(){
+  const count=selectedItems.size;
+  const hasFolder=[...selectedItems].some(id=>id.startsWith('f_'));
+  if(currentMode==='sanctuary'){
+    showBottomBar([
+      {icon:`${count}`,label:'Selected',action:()=>{}},
+      {icon:'✕',label:'Delete',action:()=>batchDelete(),style:'danger'},
+      {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
+    ]);
+  } else if(hasFolder){
+    showBottomBar([
+      {icon:`${count}`,label:'Selected',action:()=>{}},
+      {icon:'▤',label:'Move',action:()=>batchMove()},
+      {icon:'✕',label:'Delete',action:()=>batchDelete(),style:'danger'},
+      {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
+    ]);
+  } else {
+    showBottomBar([
+      {icon:`${count}`,label:'Selected',action:()=>{}},
+      {icon:'▤',label:'Move',action:()=>batchMove()},
+      {icon:'🔥',label:'Burn',action:()=>batchBurn()},
+      {icon:'✕',label:'Delete',action:()=>batchDelete(),style:'danger'},
+      {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
+    ]);
+  }
+}
+
+function exitSelectMode(){
+  selectMode=false;
+  selectedItems=new Set();
+  if(currentMode==='soup') renderTableView();
+  else renderSanctuaryView();
+  renderDefaultBar(currentMode);
+}
+
+
+function toggleSelectItem(id){
+  if(selectedItems.has(id))selectedItems.delete(id);
+  else selectedItems.add(id);
+  if(selectedItems.size===0){exitSelectMode();return;}
+  renderSelectBar();
+  // Force UI update to show gold rings
+  if(currentMode==='soup') renderTableView();
+  else renderSanctuaryView();
+}
+
+async function batchDelete(){
+  if(!selectedItems.size)return;
+  if(!confirm(`Move ${selectedItems.size} item(s) to Void?`))return;
+  const allD=await getDiscourses();
+  const allF=await getFolders();
+  const allC=await getCharacters();
+  for(const id of selectedItems){
+    if(allD.find(d=>d.id===id))await deleteDiscourse(id);
+    else if(allF.find(f=>f.id===id))await deleteFolder(id);
+    else if(allC.find(c=>c.id===id))await deleteCharacter(id);
+  }
+  exitSelectMode();
+  showToast(`Moved to Void ◌`);
+}
+
+
+
+async function batchMove(){
+  if(!selectedItems.size)return;
+  const folders=await getFolders();
+  const sel=document.getElementById('move-parent-select');
+  sel.innerHTML='<option value="">The Soup</option>';
+  folders.forEach(f=>{
+    const o=document.createElement('option');
+    o.value=f.id;o.textContent=f.name;
+    sel.appendChild(o);
+  });
+  document.getElementById('move-modal').classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
+}
+
+async function confirmBatchMove(){
+  const folderId=document.getElementById('move-parent-select').value||null;
+  for(const id of selectedItems)await updateDiscourse(id,{folder_id:folderId});
+  closeOverlay();
+  exitSelectMode();
+  showToast(`Moved ${selectedItems.size} items`);
+}
+
+async function batchBurn(){
+  if(!selectedItems.size)return;
+  await openBurnDiscModal();
 }
 
 
@@ -1069,14 +1177,28 @@ function updateHeaderButtons(){
   document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
   document.getElementById('import-json-input').onchange=e=>importJSON(e);
   document.getElementById('hdr-sync').onclick=()=>{showToast('Syncing with Akashic...');restoreFromAkashic();};
-  document.getElementById('hdr-search').onclick=()=>openGlobalSearch();
+  document.getElementById('hdr-search').onclick=()=>{
+    if(currentMode==='soup')openGlobalSearch();
+    else openSanctuarySearch();
+  };
 }
+
 
 async function goBack(){
   if(currentView==='lighthouse' && currentDiscourseId) await saveCurrentDiscourse(true);
   if(currentMode==='soup') { showPanel('view-soup'); renderTableView(); }
   else { showPanel('view-sanctuary'); renderSanctuaryView(); }
 }
+
+function openSanctuarySearch(){
+  const modal=document.getElementById('global-search-modal');
+  document.getElementById('global-search-input').placeholder='Search characters...';
+  document.getElementById('global-search-input').value='';
+  document.getElementById('global-search-results').innerHTML='<div class="global-search-empty">Search characters...</div>';
+  modal.classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
+}
+
 
 /* RENDER TABLE */
 async function renderTableView(){
@@ -1100,7 +1222,8 @@ async function renderTableView(){
 
   firefly.sd(allD.reduce((s,d)=>s+(d.raw_text||'').length,0));
 
-  if(!cf.length&&!discs.length&&!notes.length){const g=document.createElement('div');g.className='cards-grid';g.innerHTML=`<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">${currentFolderId===null?'Create a folder to begin':'Nothing here yet'}</div></div>`;surface.appendChild(g);return;}
+  if(!cf.length&&!discs.length&&!notes.length){const g=document.createElement('div');g.className='cards-grid';g.innerHTML=`<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">${currentFolderId===null?'Create a folder to begin':'Nothing here yet'}</div></div>`;surface.appendChild(g);
+return;}
 
   if(cf.length){
     const l=document.createElement('div');l.className='cards-section-label';l.textContent='Folders';surface.appendChild(l);
@@ -1109,9 +1232,15 @@ async function renderTableView(){
       const dc=allD.filter(d=>d.folder_id===f.id&&d.item_type!=='note'&&!d.isDeleted).length,nc=allD.filter(d=>d.folder_id===f.id&&d.item_type==='note'&&!d.isDeleted).length,sc=allF.filter(sf=>sf.parent_id===f.id).length;
       const meta=[];if(dc>0)meta.push(dc+(dc===1?' discourse':' discourses'));if(nc>0)meta.push(nc+(nc===1?' note':' notes'));if(sc>0)meta.push(sc+(sc===1?' folder':' folders'));
       const card=document.createElement('div');card.className='folder-card card';
+if(selectedItems.has(f.id)) card.classList.add('card-selected');
+
       card.innerHTML=`<div class="folder-card-top"><span class="folder-icon-glyph">▤</span></div><div class="folder-card-name">${escHtml(f.name)}</div><div class="folder-card-meta">${meta.length?meta.join(' · '):'Empty'}</div>`;
-      card.addEventListener('click',()=>{if(!longPressConsumed)enterFolder(f.id,f.name);});
-      card.addEventListener('mousedown',e=>startLP(e,card,{type:'folder',id:f.id,name:f.name,data:f}));
+      card.addEventListener('click',()=>{
+  if(longPressConsumed){longPressConsumed=false;return;}
+  if(selectMode){toggleSelectItem(f.id);return;}
+  enterFolder(f.id,f.name);
+});
+  card.addEventListener('mousedown',e=>startLP(e,card,{type:'folder',id:f.id,name:f.name,data:f}));
       card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
       card.addEventListener('touchstart',e=>startLP(e,card,{type:'folder',id:f.id,name:f.name,data:f}),{passive:true});
       card.addEventListener('touchend',()=>cancelLP(card));card.addEventListener('touchcancel',()=>cancelLP(card));
@@ -1130,10 +1259,19 @@ async function buildDiscourseCard(d){
   const tile=await getMosaicTile(d.id),hasMosaic=tile&&tile.anchors&&tile.anchors.length>0;
   const date=new Date(d.updated_at||d.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
   const preview=d.raw_text?d.raw_text.replace(/\n+/g,' ').slice(0,100):'';
-  const card=document.createElement('div');card.className='discourse-card card';
-  card.innerHTML=`<div class="discourse-card-title">${escHtml(d.title||'Untitled')}</div>${preview?`<div class="discourse-card-preview">${escHtml(preview)}</div>`:''}<div class="discourse-card-footer"><span class="discourse-card-date">${date}</span><div class="discourse-card-badges">${d.source_link?'<span class="badge-pinned">⟵ pinned</span>':''}${hasMosaic?'<span class="badge-mosaic">◈</span>':''}</div></div>`;
-  card.addEventListener('click',()=>{if(!longPressConsumed)openDiscourse(d.id);});
-  card.addEventListener('mousedown',e=>startLP(e,card,{type:'discourse',id:d.id,name:d.title,data:d}));
+  const card=document.createElement('div');
+card.className='discourse-card card';
+if(selectedItems.has(d.id)) card.classList.add('card-selected');
+
+card.innerHTML=`<div class="discourse-card-title">${escHtml(d.title||'Untitled')}</div>${preview?`<div class="discourse-card-preview">${escHtml(preview)}</div>`:''}<div class="discourse-card-footer"><span class="discourse-card-date">${date}</span><div class="discourse-card-badges">${d.source_link?'<span class="badge-pinned">⟵ pinned</span>':''}${hasMosaic?'<span class="badge-mosaic">◈</span>':''}</div></div>`;
+
+card.addEventListener('click',()=>{
+  if(longPressConsumed){longPressConsumed=false;return;}
+  if(selectMode){toggleSelectItem(d.id);return;}
+  openDiscourse(d.id);
+});
+
+card.addEventListener('mousedown',e=>startLP(e,card,{type:'discourse',id:d.id,name:d.title,data:d}));
   card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
   card.addEventListener('touchstart',e=>startLP(e,card,{type:'discourse',id:d.id,name:d.title,data:d}),{passive:true});
   card.addEventListener('touchend',()=>cancelLP(card));card.addEventListener('touchcancel',()=>cancelLP(card));
@@ -1229,9 +1367,17 @@ async function renderSanctuaryView(){
   const l=document.createElement('div');l.className='cards-section-label';l.textContent='Characters';surface.appendChild(l);
   const g=document.createElement('div');g.className='cards-grid';
   for(const c of filtered){
-    const card=document.createElement('div');card.className='character-card card';
+        const card=document.createElement('div');card.className='character-card card';
+    if(selectedItems.has(c.id)) card.classList.add('card-selected'); // <-- Add this line
+    
     card.innerHTML=`<div><div class="char-card-name">${escHtml(c.name)}</div><div class="char-card-role">${escHtml(c.role||'No role assigned')}</div></div><div class="char-card-footer"><div class="char-card-meta">${new Date(c.updated_at).toLocaleDateString()}</div></div>`;
-    card.addEventListener('click',()=>{if(!longPressConsumed)openChat(c.id);});
+    
+    card.addEventListener('click',()=>{
+      if(longPressConsumed){longPressConsumed=false;return;}
+      if(selectMode){toggleSelectItem(c.id);return;} // <-- Add this line to intercept clicks
+      openChat(c.id);
+    });
+
     card.addEventListener('mousedown',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}));
     card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
     card.addEventListener('touchstart',e=>startLP(e,card,{type:'character',id:c.id,name:c.name,data:c}),{passive:true});
@@ -1540,12 +1686,21 @@ async function purgeAll(){const delD=await getDeletedDiscourses(),delC=await get
 
 /* SEARCH */
 function onSearchInput(val){searchQuery=val.trim().toLowerCase();renderTableView();}
-async function openGlobalSearch(){document.getElementById('global-search-modal').classList.add('visible');document.getElementById('cosm-overlay').classList.add('active');document.getElementById('global-search-input').value='';document.getElementById('global-search-results').innerHTML='<div class="global-search-empty">Type to search...</div>';}
+
+async function openGlobalSearch(){document.getElementById('global-search-modal').classList.add('visible');
+document.getElementById('cosm-overlay').classList.add('active');
+document.getElementById('global-search-input').placeholder='Search folders & discourses...';
+document.getElementById('global-search-input').value='';document.getElementById('global-search-results').innerHTML='<div class="global-search-empty">Type to search...</div>';}
+
 function closeGlobalSearch(){document.getElementById('global-search-modal').classList.remove('visible');document.getElementById('cosm-overlay').classList.remove('active');}
+
 async function onGlobalSearchInput(query){
-  const re=document.getElementById('global-search-results');if(!query.trim()){re.innerHTML='<div class="global-search-empty">Type to search...</div>';return;}
+  const re=document.getElementById('global-search-results');
+if(!query.trim()){re.innerHTML='<div class="global-search-empty">Type to search...</div>';
+return;}
   const q=query.toLowerCase(),folders=await getFolders(),discs=await getDiscourses(),chars=await getCharacters();
   const fm=new Map(folders.map(f=>[f.id,f]));
+
   function gfp(fId){const p=[];let c=fId?fm.get(fId):null;while(c){p.unshift(c.name);c=c.parent_id?fm.get(c.parent_id):null;}return p.length?p.join(' / '):'The Soup';}
   const mf=folders.filter(f=>(f.name||'').toLowerCase().includes(q)).map(f=>({type:'folder',item:f,path:gfp(f.parent_id)}));
   const md=discs.filter(d=>!d.deleted_at&&((d.title||'').toLowerCase().includes(q)||(d.raw_text||'').toLowerCase().includes(q))).map(d=>({type:'discourse',item:d,path:gfp(d.folder_id)}));
@@ -1570,16 +1725,25 @@ async function confirmNewFolder(){
 }
 
 /* MANAGEMENT */
+/* MANAGEMENT */
 function openManagementModal(item){
   mgmtItem=item;
   const pills=[
-    {icon:'✎',label:'Rename',action:()=>{resetToDefaultBar();openRenameModal();}},
-    {icon:'▤',label:'Move',action:()=>{resetToDefaultBar();openMoveModal();}},
-    {icon:'↓',label:'Export',action:()=>{resetToDefaultBar();handleMgmtExport();},style:'gold'},
-    {icon:'◈',label:'Select',action:()=>enterSelectMode(item)},
-    {icon:'✕',label:'Delete',action:()=>{resetToDefaultBar();handleMgmtDelete();},style:'danger'},
+    {icon:'✎',label:'Rename',action:()=>{ renderDefaultBar(currentMode); openRenameModal(); }},
+    {icon:'▤',label:'Move',action:()=>{ renderDefaultBar(currentMode); openMoveModal(); }},
+    {icon:'↓',label:'Export',action:()=>{renderDefaultBar(currentMode);handleMgmtExport();}},
+    {icon:'◈',label:'Select',action:()=>{ renderDefaultBar(currentMode); enterSelectMode(item); }},
+    {icon:'✕',label:'Delete',action:()=>{ renderDefaultBar(currentMode); handleMgmtDelete(); },style:'danger'},
   ];
   showBottomBar(pills);
+}
+
+async function handleMgmtExport() {
+  if(!mgmtItem)return;
+  if(mgmtItem.type==='folder') await exportFolderContents(mgmtItem.id);
+  else if(mgmtItem.type==='discourse') await exportDiscourseMarkdown(mgmtItem.id);
+  else showToast("Cannot export character directly");
+  resetToDefaultBar();
 }
 
 function resetToDefaultBar(){
@@ -1595,17 +1759,45 @@ async function handleMgmtDelete(){
 }
 
 /* RENAME */
-function openRenameModal(){if(!mgmtItem)return;document.getElementById("rename-title").textContent=mgmtItem.type==='folder'?'Rename Folder':'Rename Discourse';document.getElementById("rename-input").value=mgmtItem.name||'';document.getElementById("rename-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");setTimeout(()=>document.getElementById("rename-input").focus(),100);}
-function closeRenameModal(){document.getElementById("rename-modal").classList.remove("visible");closeOverlay();}
+function openRenameModal(){
+  if(!mgmtItem)return;
+  document.getElementById("rename-title").textContent=mgmtItem.type==='folder'?'Rename Folder':'Rename Discourse';
+  document.getElementById("rename-input").value=mgmtItem.name||'';
+  document.getElementById("rename-modal").classList.add("visible");
+  document.getElementById("cosm-overlay").classList.add("active");
+  setTimeout(()=>document.getElementById("rename-input").focus(),100);
+}
 
-async function confirmRename(){if(!mgmtItem)return;const n=document.getElementById("rename-input").value.trim();if(!n)return;if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});else if(mgmtItem.type==='character'){await updateCharacter(mgmtItem.id,{name:n});renderSanctuaryView();}else await updateDiscourse(mgmtItem.id,{title:n});closeRenameModal();await renderTableView();mgmtItem=null;showToast("Renamed");}
+async function confirmRename(){
+  if(!mgmtItem)return;
+  const n=document.getElementById("rename-input").value.trim();
+  if(!n)return;
+  if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});
+  else if(mgmtItem.type==='character'){await updateCharacter(mgmtItem.id,{name:n});renderSanctuaryView();}
+  else await updateDiscourse(mgmtItem.id,{title:n});
+  closeRenameModal();
+  await renderTableView();
+  resetToDefaultBar();
+  showToast("Renamed");
+}
+
 
 /* MOVE */
-async function openMoveModal(){
-  if(!mgmtItem)return;const sel=document.getElementById("move-parent-select");sel.innerHTML='<option value="">The Soup</option>';
-  const folders=await getFolders();const vf=folders.filter(f=>f.id!==mgmtItem.id);
-  for(const f of vf){const o=document.createElement('option');o.value=f.id;o.textContent=f.name;const cp=mgmtItem.type==='folder'?mgmtItem.data.parent_id:mgmtItem.data.folder_id;if(f.id===cp)o.selected=true;sel.appendChild(o);}
-  document.getElementById("move-modal").classList.add("visible");document.getElementById("cosm-overlay").classList.add("active");
+function openMoveModal(){
+  if(!mgmtItem)return;
+  const sel=document.getElementById("move-parent-select");
+  sel.innerHTML='<option value="">The Soup</option>';
+  getFolders().then(folders=>{
+    folders.filter(f=>f.id!==mgmtItem.id).forEach(f=>{
+      const o=document.createElement('option');
+      o.value=f.id;o.textContent=f.name;
+      const cp=mgmtItem.type==='folder'?mgmtItem.data.parent_id:mgmtItem.data.folder_id;
+      if(f.id===cp)o.selected=true;
+      sel.appendChild(o);
+    });
+  });
+  document.getElementById("move-modal").classList.add("visible");
+  document.getElementById("cosm-overlay").classList.add("active");
 }
 
 function closeMoveModal(){document.getElementById("move-modal").classList.remove("visible");closeOverlay();}
@@ -1711,21 +1903,9 @@ function openSettingsModal(){
   document.getElementById('cosm-overlay').classList.add('active');
 }
 
-// Ensure this listener is active in your script
-document.getElementById('btn-settings-confirm').addEventListener('click', () => {
-  const k = document.getElementById('input-api-key').value.trim();
-  const u = document.getElementById('input-base-url').value.trim();
-  const m = document.getElementById('input-model').value; 
-
-  localStorage.setItem('nq_api_key', k);
-  localStorage.setItem('nq_base_url', u);
-  localStorage.setItem('nq_model', m);
-
-  closeOverlay(); // This is the function that hides everything
-  showToast("Gateway Solidified");
-});
 
 // Triple-check your closeOverlay function exists:
+
 function closeOverlay(){
   document.getElementById("cosm-overlay").classList.remove("active");
   ['folder-modal','rename-modal','move-modal',
@@ -1825,7 +2005,20 @@ async function backupToAkashic(){try{const payload={version:"NakedQuantum",expor
 async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will overwrite local fragments."))return;try{const res=await fetch(`${AKASHIC_URL}/backup/latest?user_id=${cosmUserId}`);if(!res.ok)throw new Error('No backup');const payload=JSON.parse(await res.text());const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store])){const all=await dbGetAll(store);for(const item of all)await dbDelete(store,item.id);for(const item of payload[store])await dbPut(store,item);}}showToast('Sanctuary Restored ◈');setTimeout(()=>location.reload(),1200);}catch(e){console.error(e);showToast('Akashic offline');}}
 
 /* LONG PRESS */
-function startLP(e,card,item){const touch=e.touches?e.touches[0]:e;touchStartPos={x:touch.clientX,y:touch.clientY};isLongPress=false;longPressConsumed=false;card.classList.add('long-pressing');longPressTimer=setTimeout(()=>{isLongPress=true;longPressConsumed=true;card.classList.remove('long-pressing');mgmtItem=item;openManagementModal(item);},LONG_PRESS_DURATION);}
+function startLP(e,card,item){
+  const touch=e.touches?e.touches[0]:e;
+  touchStartPos={x:touch.clientX,y:touch.clientY};
+  isLongPress=false;longPressConsumed=false;
+  card.classList.add('long-pressing');
+  longPressTimer=setTimeout(()=>{
+    isLongPress=true;longPressConsumed=true;
+    card.classList.remove('long-pressing');
+    card.classList.add('card-selected'); // stays gold
+    mgmtItem=item;
+    openManagementModal(item);
+  },LONG_PRESS_DURATION);
+}
+
 function handleTM(e,card){if(!longPressTimer)return;const t=e.touches[0];if(Math.abs(t.clientX-touchStartPos.x)>MOVE_THRESHOLD||Math.abs(t.clientY-touchStartPos.y)>MOVE_THRESHOLD)cancelLP(card);}
 
 function cancelLP(card){
@@ -1860,18 +2053,22 @@ document.getElementById('btn-export-docx').addEventListener('click',exportDocx);
   document.getElementById('content-textarea').addEventListener('paste',function(e){const h=e.clipboardData&&e.clipboardData.getData('text/html');if(h){e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));}});
 
 document.addEventListener('click',e=>{
-  if(mgmtItem){
-    const bar=document.getElementById('bottom-bar');
-    if(bar&&!bar.contains(e.target)){
-      resetToDefaultBar();
-    }
+  if(!mgmtItem)return;
+  const bar=document.getElementById('bottom-bar');
+  const overlay=document.getElementById('cosm-overlay');
+  if(bar&&!bar.contains(e.target)&&overlay&&!overlay.classList.contains('active')){
+    resetToDefaultBar();
   }
 });
 
-  document.getElementById('btn-rename-cancel').addEventListener('click',closeRenameModal);
+  document.getElementById('btn-rename-cancel').addEventListener('click',closeOverlay);
   document.getElementById('btn-rename-confirm').addEventListener('click',confirmRename);
   document.getElementById('btn-move-cancel').addEventListener('click',closeMoveModal);
-  document.getElementById('btn-move-confirm').addEventListener('click',confirmMove);
+  document.getElementById('btn-move-confirm').addEventListener('click',()=>{
+  if(selectMode)confirmBatchMove();
+  else confirmMove();
+});
+
   document.getElementById('btn-global-search-cancel').addEventListener('click',closeGlobalSearch);
   document.getElementById('global-search-input').addEventListener('input',e=>onGlobalSearchInput(e.target.value));
   document.getElementById('capture-folder').addEventListener('change',function(){const inp=document.getElementById('capture-new-folder-input');inp.style.display=this.value==='__new__'?'block':'none';if(this.value==='__new__')setTimeout(()=>inp.focus(),50);});
@@ -1888,7 +2085,6 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
   const k = document.getElementById('input-api-key').value.trim();
   const u = document.getElementById('input-base-url').value.trim();
   const m = document.getElementById('input-model').value; // Grabs the selected option
-
   localStorage.setItem('nq_api_key', k);
   localStorage.setItem('nq_base_url', u);
   localStorage.setItem('nq_model', m);
@@ -1897,13 +2093,14 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
   showToast("Gateway Solidified");
 });
 
-
-document.getElementById('search-input-sanctuary').addEventListener('input',e=>{sanctuarySearchQuery=e.target.value.toLowerCase();renderSanctuaryView();});
   document.getElementById('btn-forge-save').addEventListener('click',saveCharacterForge);
   document.getElementById('btn-forge-close').addEventListener('click',closeCharacterForge);
 document.getElementById('btn-role-cancel').addEventListener('click',closeOverlay);
 document.getElementById('btn-role-confirm').addEventListener('click',confirmAddRole);
-  document.getElementById('btn-persona-back').addEventListener('click',()=>showPanel('view-sanctuary'));
+  document.getElementById('btn-persona-back').addEventListener('click',()=>{
+  showPanel('view-sanctuary');
+  renderSanctuaryView();
+});
 document.getElementById('btn-save-persona').addEventListener('click',savePersonaPage);
 document.getElementById('btn-add-role').addEventListener('click',addNewRole);
 document.getElementById('chat-persona-pill').addEventListener('click',openPersonaPillSelector);
