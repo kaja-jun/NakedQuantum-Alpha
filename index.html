@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.18</title>
+<title>NakedQuantum v0.19</title>
 <style>
 :root {
   --bg: #000000;
@@ -757,26 +757,151 @@ function savePersonaRoles(roles){
 class FF{constructor(){this.canvas=document.getElementById('firefly-canvas');this.ctx=this.canvas.getContext('2d');this.p=[];this.d=15;this.r();window.addEventListener('resize',()=>this.r());this.a();}r(){this.canvas.width=innerWidth;this.canvas.height=innerHeight;}sd(l){this.d=Math.min(60,15+Math.floor(l/200));}a(){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);while(this.p.length<this.d)this.p.push({x:Math.random()*this.canvas.width,y:Math.random()*this.canvas.height,s:Math.random()*1.5+.2,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,a:Math.random()*.4+.1,p:Math.random()*.01+.002});if(this.p.length>this.d)this.p.splice(this.d);this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.p;if(p.a>.6||p.a<.1)p.p*=-1;if(p.x<0)p.x=this.canvas.width;if(p.x>this.canvas.width)p.x=0;if(p.y<0)p.y=this.canvas.height;if(p.y>this.canvas.height)p.y=0;this.ctx.beginPath();this.ctx.arc(p.x,p.y,p.s,0,Math.PI*2);this.ctx.fillStyle=`rgba(200,160,80,${p.a})`;this.ctx.fill();});requestAnimationFrame(()=>this.a());}}
 const firefly=new FF();
 
-/* DB */
-const dbReq=indexedDB.open("SanctuaryDB_v2",3);
-dbReq.onupgradeneeded=e=>{const d=e.target.result;
-  if(!d.objectStoreNames.contains("characters"))d.createObjectStore("characters",{keyPath:"id"});
-  if(!d.objectStoreNames.contains("history")){const h=d.createObjectStore("history",{keyPath:"id",autoIncrement:true});h.createIndex("charId","charId",{unique:false});}
-  if(!d.objectStoreNames.contains("summaries")){const s=d.createObjectStore("summaries",{keyPath:"id",autoIncrement:true});s.createIndex("charId","charId",{unique:false});}
-  if(!d.objectStoreNames.contains("cosm_folders"))d.createObjectStore("cosm_folders",{keyPath:"id"});
-  if(!d.objectStoreNames.contains("cosm_discourses")){const dc=d.createObjectStore("cosm_discourses",{keyPath:"id"});dc.createIndex("folder_id","folder_id",{unique:false});dc.createIndex("created_at","created_at",{unique:false});}
-  if(!d.objectStoreNames.contains("cosm_mosaic_tiles")){const m=d.createObjectStore("cosm_mosaic_tiles",{keyPath:"id"});m.createIndex("discourse_id","discourse_id",{unique:false});}
-  if(!d.objectStoreNames.contains("cosm_backlinks")){const bl=d.createObjectStore("cosm_backlinks",{keyPath:"id"});bl.createIndex("discourse_id","discourse_id",{unique:false});}
+/* DB — ABYSS-PROOF WORKER (NULL FIXED) */
+const WORKER_CODE = `
+importScripts('https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js');
+let db = null;
+let saveTimer = null;
+const tableColumns = {}; 
+
+async function initSql() {
+  const SQL = await initSqlJs({ locateFile: f => 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/' + f });
+  const existing = await loadFromOPFS();
+  db = existing ? new SQL.Database(existing) : new SQL.Database();
+  
+  db.run("CREATE TABLE IF NOT EXISTS cosm_folders(id TEXT PRIMARY KEY, name TEXT, parent_id TEXT, created_at INTEGER, updated_at INTEGER, is_deleted INTEGER DEFAULT 0)");
+  db.run("CREATE TABLE IF NOT EXISTS cosm_discourses(id TEXT PRIMARY KEY, title TEXT, raw_text TEXT, folder_id TEXT, source_link TEXT, item_type TEXT, tags TEXT, is_deleted INTEGER DEFAULT 0, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)");
+  db.run("CREATE TABLE IF NOT EXISTS characters(id TEXT PRIMARY KEY, name TEXT, role TEXT, backstory TEXT, personality TEXT, lorebook TEXT, scenario TEXT, inclination TEXT, relationships TEXT, pc_info TEXT, player_role_id TEXT, image TEXT, temperature REAL DEFAULT 1, is_deleted INTEGER DEFAULT 0, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)");
+  db.run("CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY AUTOINCREMENT, charId TEXT, role TEXT, content TEXT, created_at INTEGER)");
+  db.run("CREATE TABLE IF NOT EXISTS summaries(id TEXT PRIMARY KEY, charId TEXT, text TEXT, type TEXT, created_at INTEGER)");
+  
+  ['cosm_folders', 'cosm_discourses', 'characters', 'history', 'summaries'].forEach(t => {
+    try {
+      const info = db.exec("PRAGMA table_info(" + t + ")");
+      tableColumns[t] = info[0].values.map(v => v[1]);
+    } catch(e) {}
+  });
+
+  // Purge the physical 'root' folder
+  db.run("DELETE FROM cosm_folders WHERE id='root'");
+  
+  await save();
+}
+
+async function loadFromOPFS() {
+  try {
+    const root = await navigator.storage.getDirectory();
+    const fh = await root.getFileHandle('nq.db', { create: false });
+    return new Uint8Array(await (await fh.getFile()).arrayBuffer());
+  } catch(e) { return null; }
+}
+
+async function save() {
+  try {
+    const data = db.export();
+    const root = await navigator.storage.getDirectory();
+    const fh = await root.getFileHandle('nq.db', { create: true });
+    const writable = await fh.createWritable();
+    await writable.write(data);
+    await writable.close();
+  } catch(e) { console.error('OPFS Save Failed:', e); }
+}
+
+function toObjects(res) {
+  if (!res || !res.length) return [];
+  const cols = res[0].columns;
+  return res[0].values.map(v => {
+    const obj = {};
+    cols.forEach((c, i) => {
+      let val = v[i];
+      if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+        try { val = JSON.parse(val); } catch(e) {}
+      }
+      obj[c] = val;
+    });
+    obj.isDeleted = obj.is_deleted === 1;
+    return obj;
+  });
+}
+
+self.onmessage = async (e) => {
+  const { id, action, store, data, field, value } = e.data;
+  try {
+    if (action === 'INIT') { await initSql(); self.postMessage({ id, result: 'ready' }); return; }
+    let result = null;
+    if (action === 'GET_ALL') { result = toObjects(db.exec("SELECT * FROM " + store)); }
+    else if (action === 'GET') { const res = db.exec("SELECT * FROM " + store + " WHERE id=?", [data.id]); result = res.length ? toObjects(res)[0] : null; }
+    else if (action === 'GET_BY_INDEX') { result = toObjects(db.exec("SELECT * FROM " + store + " WHERE " + field + "=?", [value])); }
+    else if (action === 'PUT') {
+      const obj = { ...data };
+      if ('isDeleted' in obj) { obj.is_deleted = obj.isDeleted ? 1 : 0; }
+      const validCols = tableColumns[store] || [];
+      const keys = Object.keys(obj).filter(k => validCols.includes(k));
+      
+      // THE FIX: Do not stringify true 'null'
+      const vals = keys.map(k => {
+        const v = obj[k];
+        if (v === null) return null; // Let SQLite handle true emptiness
+        if (typeof v === 'object') return JSON.stringify(v);
+        return v;
+      });
+      
+      const placeholders = keys.map(() => '?').join(',');
+      const updates = keys.filter(k => k !== 'id').map(k => k + "=excluded." + k).join(',');
+      db.run("INSERT INTO " + store + "(" + keys.join(',') + ") VALUES (" + placeholders + ") ON CONFLICT(id) DO UPDATE SET " + updates, vals);
+      if(saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(save, 500);
+      result = 'ok';
+    }
+    else if (action === 'DELETE') { db.run("DELETE FROM " + store + " WHERE id=?", [data.id]); save(); result = 'ok'; }
+    self.postMessage({ id, result });
+  } catch(err) { self.postMessage({ id, error: err.message }); }
 };
-dbReq.onsuccess=e=>{db=e.target.result;init();};
-dbReq.onerror=e=>console.error("NQ DB",e);
+`;
+
+
+const workerBlob = new Blob([WORKER_CODE], { type: 'application/javascript' });
+const workerUrl = URL.createObjectURL(workerBlob);
+const _worker = new Worker(workerUrl);
+
+let _id = 0;
+const _pending = {};
+_worker.onmessage = e => {
+  const { id, result, error } = e.data;
+  if (_pending[id]) {
+    if (error) _pending[id].reject(new Error(error));
+    else _pending[id].resolve(result);
+    delete _pending[id];
+  }
+};
+
+const _workerReady = new Promise((res, rej) => {
+  const msgId = ++_id;
+  _pending[msgId] = { resolve: res, reject: rej };
+  _worker.postMessage({ id: msgId, action: 'INIT' });
+});
 
 /* DB HELPERS */
-const dbPut=(s,d)=>new Promise((res,rej)=>{const r=db.transaction(s,"readwrite").objectStore(s).put(d);r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e.target.error);});
-const dbGet=(s,id)=>new Promise(res=>{const r=db.transaction(s,"readonly").objectStore(s).get(id);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);});
-const dbGetAll=s=>new Promise(res=>{const r=db.transaction(s,"readonly").objectStore(s).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);});
-const dbGetByIndex=(s,i,v)=>new Promise(res=>{const r=db.transaction(s,"readonly").objectStore(s).index(i).getAll(IDBKeyRange.only(v));r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);});
-const dbDelete=(s,id)=>new Promise(res=>{const r=db.transaction(s,"readwrite").objectStore(s).delete(id);r.onsuccess=()=>res();r.onerror=()=>res();});
+const dbPut = (s, d) => _workerReady.then(() => new Promise((res, rej) => {
+  const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
+  _worker.postMessage({ id: msgId, action: 'PUT', store: s, data: d });
+}));
+const dbGetAll = (s) => _workerReady.then(() => new Promise((res, rej) => {
+  const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
+  _worker.postMessage({ id: msgId, action: 'GET_ALL', store: s });
+}));
+const dbGet = (s, id) => _workerReady.then(() => new Promise((res, rej) => {
+  const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
+  _worker.postMessage({ id: msgId, action: 'GET', store: s, data: { id } });
+}));
+const dbGetByIndex = (s, f, v) => _workerReady.then(() => new Promise((res, rej) => {
+  const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
+  _worker.postMessage({ id: msgId, action: 'GET_BY_INDEX', store: s, field: f, value: v });
+}));
+const dbDelete = (s, id) => _workerReady.then(() => new Promise((res, rej) => {
+  const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
+  _worker.postMessage({ id: msgId, action: 'DELETE', store: s, data: { id } });
+}));
 
 /* FOLDERS */
 const getFolders=()=>dbGetAll("cosm_folders");
@@ -787,7 +912,23 @@ async function deleteFolder(id){await dbDelete("cosm_folders",id);const ds=await
 async function getDiscourses(){const a=await dbGetAll("cosm_discourses");return a.filter(d=>!d.isDeleted).sort((a,b)=>b.updated_at-a.updated_at);}
 async function getDeletedDiscourses(){const a=await dbGetAll("cosm_discourses");return a.filter(d=>d.isDeleted).sort((a,b)=>b.deleted_at-a.deleted_at);}
 const getDiscourse=id=>dbGet("cosm_discourses",id);
-async function createDiscourse({title="Untitled Discourse",raw_text="",folder_id=null,source_link=null}={}){const id="d_"+Date.now(),now=Date.now(),disc={id,title,raw_text,folder_id,source_link,created_at:now,updated_at:now};await dbPut("cosm_discourses",disc);return disc;}
+
+async function createDiscourse({title="Untitled Discourse", raw_text="", folder_id=null, source_link=null, item_type="discourse"}={}) {
+  const id = "d_" + Date.now();
+  const now = Date.now();
+  
+  // Strict normalization
+  const finalFolderId = (!folder_id || folder_id === 'root') ? null : folder_id;
+  
+  const disc = {
+    id, title, raw_text, folder_id: finalFolderId, source_link,
+    created_at: now, updated_at: now, item_type
+  };
+  
+  await dbPut("cosm_discourses", disc);
+  return disc;
+}
+
 async function updateDiscourse(id,updates){const disc=await getDiscourse(id);if(!disc)return;const u={...disc,...updates,updated_at:Date.now()};await dbPut("cosm_discourses",u);return u;}
 async function deleteDiscourse(id){const d=await getDiscourse(id);if(!d)return;await dbPut("cosm_discourses",{...d,isDeleted:true,deleted_at:Date.now()});}
 async function purgeDiscourse(id){await dbDelete("cosm_discourses",id);const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",id);for(const x of t)await dbDelete("cosm_mosaic_tiles",x.id);const b=await dbGetByIndex("cosm_backlinks","discourse_id",id);for(const x of b)await dbDelete("cosm_backlinks",x.id);}
@@ -809,12 +950,26 @@ async function saveMosaicTile(dId,anchors){const e=await getMosaicTile(dId);if(e
 async function deleteMosaicTile(dId){const t=await getMosaicTile(dId);if(t)await dbDelete("cosm_mosaic_tiles",t.id);mosaicCache[dId]=null;}
 async function getBacklink(dId){const l=await dbGetByIndex("cosm_backlinks","discourse_id",dId);return l.length>0?l[0]:null;}
 
+
 /* INIT */
-async function init(){updateHeaderButtons();
-renderDefaultBar(currentMode);
-await renderTableView();
-document.getElementById('input-api-key').value=localStorage.getItem('nexus_v7_key')||localStorage.getItem('nq_api_key')||'';
-document.getElementById('input-model').value=localStorage.getItem('activeModel_v1')||localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';}
+async function init(){
+  await _workerReady;
+  
+  // Force the absolute starting state
+  currentMode = 'soup';
+  currentView = 'soup';
+  currentFolderId = null;
+  breadcrumbPath = [{id: null, name: '◈ The Soup'}];
+  
+  updateHeaderButtons();
+  showPanel('view-soup'); // CRITICAL: This wakes up the canvas
+  await renderTableView();
+  
+  document.getElementById('input-api-key').value=localStorage.getItem('nq_api_key')||'';
+  document.getElementById('input-model').value=localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';
+}
+
+
 
 /*Naked Handle*/
 
@@ -1184,11 +1339,23 @@ function updateHeaderButtons(){
 }
 
 
-async function goBack(){
-  if(currentView==='lighthouse' && currentDiscourseId) await saveCurrentDiscourse(true);
-  if(currentMode==='soup') { showPanel('view-soup'); renderTableView(); }
-  else { showPanel('view-sanctuary'); renderSanctuaryView(); }
+async function goBack() {
+  if (currentView === 'lighthouse' && currentDiscourseId) {
+    await saveCurrentDiscourse(true);
+  }
+  
+  // Ensure we aren't navigating back to a 'null' state that breaks the renderer
+  if (!currentFolderId) currentFolderId = null; 
+
+  if (currentMode === 'soup') { 
+    showPanel('view-soup'); 
+    await renderTableView(); 
+  } else { 
+    showPanel('view-sanctuary'); 
+    renderSanctuaryView(); 
+  }
 }
+
 
 function openSanctuarySearch(){
   const modal=document.getElementById('global-search-modal');
@@ -1200,85 +1367,120 @@ function openSanctuarySearch(){
 }
 
 
-/* RENDER TABLE */
-async function renderTableView(){
+async function renderTableView() {
+  const surface = document.getElementById('table-surface');
+  if (!surface) return;
+  surface.innerHTML = '';
   renderBreadcrumb();
-  const surface=document.getElementById('table-surface');surface.innerHTML='';
-  const sw=document.getElementById('search-bar-wrap');
-  if(currentFolderId!==null){sw.style.display='block';}else{sw.style.display='none';searchQuery='';const inp=document.getElementById('search-input');if(inp)inp.value='';}
 
-  if(searchQuery&&currentFolderId!==null){
-    const all=await dbGetAll("cosm_discourses");
-    const res=all.filter(d=>!d.isDeleted&&d.folder_id===currentFolderId&&((d.title||'').toLowerCase().includes(searchQuery)||(d.raw_text||'').toLowerCase().includes(searchQuery)));
-    if(!res.length){const g=document.createElement('div');g.className='cards-grid';g.innerHTML='<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">No results</div></div>';surface.appendChild(g);return;}
-    const l=document.createElement('div');l.className='cards-section-label';l.textContent=`Results (${res.length})`;surface.appendChild(l);
-    const g=document.createElement('div');g.className='cards-grid';for(const d of res)g.appendChild(await buildDiscourseCard(d));surface.appendChild(g);return;
+  // The Quantum Corrector: Normalizes all forms of "empty"
+  const safeMatch = (a, b) => {
+    const isANull = (!a || String(a) === 'null' || String(a) === 'root' || String(a) === 'undefined');
+    const isBNull = (!b || String(b) === 'null' || String(b) === 'root' || String(b) === 'undefined');
+    if (isANull && isBNull) return true;
+    return String(a) === String(b);
+  };
+
+  const isAtRoot = (!currentFolderId || currentFolderId === 'root');
+
+  const sw = document.getElementById('search-bar-wrap');
+  if (sw) sw.style.display = isAtRoot ? 'none' : 'block';
+
+  const allF = (await getFolders()) || [];
+  const allD = (await getDiscourses()) || [];
+
+  // Filter using safeMatch to catch the trapped data
+  const cf = allF.filter(f => !f.isDeleted && safeMatch(f.parent_id, currentFolderId));
+  const notes = allD.filter(d => !d.isDeleted && d.item_type === 'note' && safeMatch(d.folder_id, currentFolderId));
+  const discs = allD.filter(d => !d.isDeleted && d.item_type !== 'note' && safeMatch(d.folder_id, currentFolderId));
+
+  if (window.firefly) firefly.sd(allD.reduce((s, d) => s + (d.raw_text || '').length, 0));
+
+  if (!cf.length && !discs.length && !notes.length) {
+    surface.innerHTML = `<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">${isAtRoot ? 'Create a folder to begin' : 'Empty Abyss'}</div></div>`;
+    return;
   }
 
-  const allF=await getFolders(),allD=await getDiscourses();
-  const cf=allF.filter(f=>f.parent_id===currentFolderId);
-  const notes=allD.filter(d=>{const s=currentFolderId===null?(d.folder_id===null||d.folder_id===undefined):d.folder_id===currentFolderId;return s&&d.item_type==='note';});
-  const discs=allD.filter(d=>{const s=currentFolderId===null?(d.folder_id===null||d.folder_id===undefined):d.folder_id===currentFolderId;return s&&d.item_type!=='note';});
+  if (cf.length) {
+    const l = document.createElement('div'); l.className = 'cards-section-label'; l.textContent = 'Folders'; surface.appendChild(l);
+    const g = document.createElement('div'); g.className = 'cards-grid';
+    for (const f of cf) {
+      const dc = allD.filter(d => safeMatch(d.folder_id, f.id) && d.item_type !== 'note' && !d.isDeleted).length;
+      const nc = allD.filter(d => safeMatch(d.folder_id, f.id) && d.item_type === 'note' && !d.isDeleted).length;
+      const sc = allF.filter(sf => safeMatch(sf.parent_id, f.id) && !sf.isDeleted).length;
+      const meta = [];
+      if (dc > 0) meta.push(dc + (dc === 1 ? ' discourse' : ' discourses'));
+      if (nc > 0) meta.push(nc + (nc === 1 ? ' note' : ' notes'));
+      if (sc > 0) meta.push(sc + (sc === 1 ? ' folder' : ' folders'));
 
-  firefly.sd(allD.reduce((s,d)=>s+(d.raw_text||'').length,0));
+      const card = document.createElement('div');
+      card.className = 'folder-card card';
+      if (typeof selectedItems !== 'undefined' && selectedItems.has(f.id)) card.classList.add('card-selected');
+      
+      card.innerHTML = `<div class="folder-card-top"><span class="folder-icon-glyph">▤</span></div><div class="folder-card-name">${escHtml(f.name)}</div><div class="folder-card-meta">${meta.length ? meta.join(' · ') : 'Empty'}</div>`;
+      
+      card.onclick = () => {
+        if (window.longPressConsumed) { window.longPressConsumed = false; return; }
+        if (typeof selectMode !== 'undefined' && selectMode) { toggleSelectItem(f.id); return; }
+        enterFolder(f.id, f.name);
+      };
+      card.onmousedown = e => startLP(e, card, {type:'folder', id:f.id, name:f.name, data:f});
+      card.ontouchstart = e => startLP(e, card, {type:'folder', id:f.id, name:f.name, data:f}, {passive:true});
+      card.onmouseup = () => cancelLP(card);
+      card.onmouseleave = () => cancelLP(card);
+      card.ontouchend = () => cancelLP(card);
 
-  if(!cf.length&&!discs.length&&!notes.length){const g=document.createElement('div');g.className='cards-grid';g.innerHTML=`<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">${currentFolderId===null?'Create a folder to begin':'Nothing here yet'}</div></div>`;surface.appendChild(g);
-return;}
-
-  if(cf.length){
-    const l=document.createElement('div');l.className='cards-section-label';l.textContent='Folders';surface.appendChild(l);
-    const g=document.createElement('div');g.className='cards-grid';
-    for(const f of cf){
-      const dc=allD.filter(d=>d.folder_id===f.id&&d.item_type!=='note'&&!d.isDeleted).length,nc=allD.filter(d=>d.folder_id===f.id&&d.item_type==='note'&&!d.isDeleted).length,sc=allF.filter(sf=>sf.parent_id===f.id).length;
-      const meta=[];if(dc>0)meta.push(dc+(dc===1?' discourse':' discourses'));if(nc>0)meta.push(nc+(nc===1?' note':' notes'));if(sc>0)meta.push(sc+(sc===1?' folder':' folders'));
-      const card=document.createElement('div');card.className='folder-card card';
-if(selectedItems.has(f.id)) card.classList.add('card-selected');
-
-      card.innerHTML=`<div class="folder-card-top"><span class="folder-icon-glyph">▤</span></div><div class="folder-card-name">${escHtml(f.name)}</div><div class="folder-card-meta">${meta.length?meta.join(' · '):'Empty'}</div>`;
-      card.addEventListener('click',()=>{
-  if(longPressConsumed){longPressConsumed=false;return;}
-  if(selectMode){toggleSelectItem(f.id);return;}
-  enterFolder(f.id,f.name);
-});
-  card.addEventListener('mousedown',e=>startLP(e,card,{type:'folder',id:f.id,name:f.name,data:f}));
-      card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
-      card.addEventListener('touchstart',e=>startLP(e,card,{type:'folder',id:f.id,name:f.name,data:f}),{passive:true});
-      card.addEventListener('touchend',()=>cancelLP(card));card.addEventListener('touchcancel',()=>cancelLP(card));
-      card.addEventListener('touchmove',e=>handleTM(e,card),{passive:true});
-      card.addEventListener('contextmenu',e=>{e.preventDefault();return false;});
       g.appendChild(card);
     }
     surface.appendChild(g);
   }
 
-  if(discs.length){const l=document.createElement('div');l.className='cards-section-label';l.textContent='Discourses';surface.appendChild(l);const g=document.createElement('div');g.className='cards-grid';for(const d of discs)g.appendChild(await buildDiscourseCard(d));surface.appendChild(g);}
-  if(notes.length){const l=document.createElement('div');l.className='cards-section-label';l.textContent='Notes';surface.appendChild(l);const g=document.createElement('div');g.className='cards-grid';for(const n of notes)g.appendChild(await buildDiscourseCard(n));surface.appendChild(g);}
+  if (discs.length) {
+    const l = document.createElement('div'); l.className = 'cards-section-label'; l.textContent = 'Discourses'; surface.appendChild(l);
+    const g = document.createElement('div'); g.className = 'cards-grid';
+    for (const d of discs) g.appendChild(await buildDiscourseCard(d));
+    surface.appendChild(g);
+  }
+
+  if (notes.length) {
+    const l = document.createElement('div'); l.className = 'cards-section-label'; l.textContent = 'Notes'; surface.appendChild(l);
+    const g = document.createElement('div'); g.className = 'cards-grid';
+    for (const n of notes) g.appendChild(await buildDiscourseCard(n));
+    surface.appendChild(g);
+  }
 }
+
 
 async function buildDiscourseCard(d){
-  const tile=await getMosaicTile(d.id),hasMosaic=tile&&tile.anchors&&tile.anchors.length>0;
-  const date=new Date(d.updated_at||d.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
-  const preview=d.raw_text?d.raw_text.replace(/\n+/g,' ').slice(0,100):'';
-  const card=document.createElement('div');
-card.className='discourse-card card';
-if(selectedItems.has(d.id)) card.classList.add('card-selected');
+  const tile = await getMosaicTile(d.id), hasMosaic = tile && tile.anchors && tile.anchors.length > 0;
+  const date = new Date(d.updated_at||d.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  const preview = d.raw_text ? d.raw_text.replace(/\n+/g,' ').slice(0,100) : '';
+  const card = document.createElement('div');
+  card.className = 'discourse-card card';
+  
+  if (typeof selectedItems !== 'undefined' && selectedItems.has(d.id)) card.classList.add('card-selected');
 
-card.innerHTML=`<div class="discourse-card-title">${escHtml(d.title||'Untitled')}</div>${preview?`<div class="discourse-card-preview">${escHtml(preview)}</div>`:''}<div class="discourse-card-footer"><span class="discourse-card-date">${date}</span><div class="discourse-card-badges">${d.source_link?'<span class="badge-pinned">⟵ pinned</span>':''}${hasMosaic?'<span class="badge-mosaic">◈</span>':''}</div></div>`;
+  card.innerHTML = `<div class="discourse-card-title">${escHtml(d.title||'Untitled')}</div>${preview?`<div class="discourse-card-preview">${escHtml(preview)}</div>`:''}<div class="discourse-card-footer"><span class="discourse-card-date">${date}</span><div class="discourse-card-badges">${d.source_link?'<span class="badge-pinned">⟵ pinned</span>':''}${hasMosaic?'<span class="badge-mosaic">◈</span>':''}</div></div>`;
 
-card.addEventListener('click',()=>{
-  if(longPressConsumed){longPressConsumed=false;return;}
-  if(selectMode){toggleSelectItem(d.id);return;}
-  openDiscourse(d.id);
-});
+  card.addEventListener('click', () => {
+    if (window.longPressConsumed) { window.longPressConsumed = false; return; }
+    // FIX: Using direct variable check, not window.
+    if (typeof selectMode !== 'undefined' && selectMode) { toggleSelectItem(d.id); return; }
+    openDiscourse(d.id);
+  });
 
-card.addEventListener('mousedown',e=>startLP(e,card,{type:'discourse',id:d.id,name:d.title,data:d}));
-  card.addEventListener('mouseup',()=>cancelLP(card));card.addEventListener('mouseleave',()=>cancelLP(card));
-  card.addEventListener('touchstart',e=>startLP(e,card,{type:'discourse',id:d.id,name:d.title,data:d}),{passive:true});
-  card.addEventListener('touchend',()=>cancelLP(card));card.addEventListener('touchcancel',()=>cancelLP(card));
-  card.addEventListener('touchmove',e=>handleTM(e,card),{passive:true});
-  card.addEventListener('contextmenu',e=>{e.preventDefault();return false;});
+  card.addEventListener('mousedown', e => startLP(e, card, {type:'discourse', id:d.id, name:d.title, data:d}));
+  card.addEventListener('mouseup', () => cancelLP(card));
+  card.addEventListener('mouseleave', () => cancelLP(card));
+  card.addEventListener('touchstart', e => startLP(e, card, {type:'discourse', id:d.id, name:d.title, data:d}), {passive:true});
+  card.addEventListener('touchend', () => cancelLP(card));
+  card.addEventListener('touchcancel', () => cancelLP(card));
+  card.addEventListener('touchmove', e => handleTM(e, card), {passive:true});
+  card.addEventListener('contextmenu', e => { e.preventDefault(); return false; });
+  
   return card;
 }
+
 
 /* BREADCRUMB */
 function renderBreadcrumb(){
@@ -1294,8 +1496,20 @@ function renderBreadcrumb(){
   });
 }
 
-function enterFolder(id,name){breadcrumbPath.push({id,name});currentFolderId=id;renderTableView();}
-function navToBc(idx){breadcrumbPath=breadcrumbPath.slice(0,idx+1);currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;renderTableView();}
+function enterFolder(id, name){
+  const folderId=(id==='root')?null:id;
+  breadcrumbPath.push({id:folderId, name:name});
+  currentFolderId=folderId;
+  renderTableView();
+}
+
+
+function navToBc(idx){
+  breadcrumbPath=breadcrumbPath.slice(0,idx+1);
+  currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;
+  renderTableView();
+}
+
 
 async function openDiscourse(id){
   if(currentDiscourseId&&id!==currentDiscourseId)await saveCurrentDiscourse(true);
@@ -1341,20 +1555,55 @@ async function newDiscourseInCurrent(){
   await openDiscourse(disc.id);setTimeout(()=>{const t=document.getElementById("discourse-title");t.select();t.focus();},120);
 }
 
-async function newDiscourseAtSoup(){
-  const folders=await getFolders();const count=folders.filter(f=>f.name.startsWith('Unknown_')).length+1;const fn=`Unknown_${count}`;
-  const fId=await createFolder(fn,null);breadcrumbPath=[{id:null,name:'◈ The Soup'},{id:fId,name:fn}];currentFolderId=fId;
-  const disc=await createDiscourse({title:"Untitled Discourse",raw_text:"",folder_id:fId});
-  await openDiscourse(disc.id);setTimeout(()=>{const t=document.getElementById("discourse-title");t.select();t.focus();},120);showToast(`Created ${fn}`);
+function handleNewDiscourse() {
+  // Use a loose check to catch null, undefined, or empty strings
+  if (!currentFolderId || currentFolderId === 'root') {
+    newDiscourseAtSoup();
+  } else {
+    newDiscourseInCurrent();
+  }
 }
 
-function handleNewDiscourse(){currentFolderId===null?newDiscourseAtSoup():newDiscourseInCurrent();}
-
-async function deleteCurrentDiscourse(){
-  if(!currentDiscourseId)return;if(!confirm("Move this discourse to the Void?"))return;
-  await deleteDiscourse(currentDiscourseId);mosaicCache[currentDiscourseId]=null;currentDiscourseId=null;
-  await goBack();showToast("Moved to Void ◌");
+async function newDiscourseAtSoup() {
+  const folders = await getFolders();
+  // Safe filtering for existing Unknown folders
+  const count = folders.filter(f => f.name && f.name.startsWith('Unknown_')).length + 1;
+  const fn = `Unknown_${count}`;
+  
+  // 1. Create the folder at the root (null)
+  const fId = await createFolder(fn, null);
+  
+  // 2. Set context to the NEW folder
+  currentFolderId = fId;
+  
+  // 3. Create the discourse INSIDE that new folder
+  const disc = await createDiscourse({
+    title: "Untitled Discourse",
+    raw_text: "",
+    folder_id: fId
+  });
+  
+  // 4. Update the path and jump in
+  breadcrumbPath = [{id: null, name: '◈ The Soup'}, {id: fId, name: fn}];
+  await openDiscourse(disc.id);
+  
+  setTimeout(() => {
+    const t = document.getElementById("discourse-title");
+    if (t) { t.select(); t.focus(); }
+  }, 120);
+  
+  showToast(`Created ${fn}`);
 }
+
+async function deleteCurrentDiscourse() {
+  if (!currentDiscourseId) return;
+  if (!confirm("Move this discourse to the Void?")) return;
+  await deleteDiscourse(currentDiscourseId);
+  currentDiscourseId = null;
+  goBack();
+  showToast("Moved to Void ◌");
+}
+
 
 /* SANCTUARY */
 async function renderSanctuaryView(){
@@ -2128,7 +2377,13 @@ document.getElementById('btn-add-manual-memory').addEventListener('click',addMan
   });
 
   document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goBack();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
+  // Final boot trigger
+  init().catch(err => {
+    console.error("BOOT CRASH:", err);
+    alert("The Abyss is blocked. Check the console.");
+  });
 });
+
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 
