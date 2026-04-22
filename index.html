@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.19</title>
+<title>NakedQuantum v0.19.2</title>
 <style>
 :root {
   --bg: #000000;
@@ -775,7 +775,12 @@ async function initSql() {
   db.run("CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY AUTOINCREMENT, charId TEXT, role TEXT, content TEXT, created_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS summaries(id TEXT PRIMARY KEY, charId TEXT, text TEXT, type TEXT, created_at INTEGER)");
   
-  ['cosm_folders', 'cosm_discourses', 'characters', 'history', 'summaries'].forEach(t => {
+  // ADDED MISSING TABLES
+  db.run("CREATE TABLE IF NOT EXISTS cosm_mosaic_tiles(id TEXT PRIMARY KEY, discourse_id TEXT, anchors TEXT, created_at INTEGER)");
+  db.run("CREATE TABLE IF NOT EXISTS cosm_backlinks(id TEXT PRIMARY KEY, discourse_id TEXT, char_name TEXT, created_at INTEGER)");
+  
+  // ADDED TO ARRAY
+  ['cosm_folders', 'cosm_discourses', 'characters', 'history', 'summaries', 'cosm_mosaic_tiles', 'cosm_backlinks'].forEach(t => {
     try {
       const info = db.exec("PRAGMA table_info(" + t + ")");
       tableColumns[t] = info[0].values.map(v => v[1]);
@@ -801,9 +806,19 @@ async function save() {
     const data = db.export();
     const root = await navigator.storage.getDirectory();
     const fh = await root.getFileHandle('nq.db', { create: true });
-    const writable = await fh.createWritable();
-    await writable.write(data);
-    await writable.close();
+    
+    try {
+      // Standard Chrome/Desktop approach
+      const writable = await fh.createWritable();
+      await writable.write(data);
+      await writable.close();
+    } catch (err) {
+      // Apple iOS / Safari strictly requires this approach in workers
+      const accessHandle = await fh.createSyncAccessHandle();
+      accessHandle.write(data);
+      accessHandle.flush();
+      accessHandle.close();
+    }
   } catch(e) { console.error('OPFS Save Failed:', e); }
 }
 
@@ -860,26 +875,32 @@ self.onmessage = async (e) => {
 `;
 
 
-const workerBlob = new Blob([WORKER_CODE], { type: 'application/javascript' });
-const workerUrl = URL.createObjectURL(workerBlob);
-const _worker = new Worker(workerUrl);
-
 let _id = 0;
 const _pending = {};
-_worker.onmessage = e => {
-  const { id, result, error } = e.data;
-  if (_pending[id]) {
-    if (error) _pending[id].reject(new Error(error));
-    else _pending[id].resolve(result);
-    delete _pending[id];
-  }
-};
+let _worker = null;
+let _workerReady = null;
 
-const _workerReady = new Promise((res, rej) => {
-  const msgId = ++_id;
-  _pending[msgId] = { resolve: res, reject: rej };
-  _worker.postMessage({ id: msgId, action: 'INIT' });
-});
+function initWorker(){
+  const workerBlob = new Blob([WORKER_CODE], { type: 'application/javascript' });
+  const workerUrl = URL.createObjectURL(workerBlob);
+  _worker = new Worker(workerUrl);
+
+  _worker.onmessage = e => {
+    const { id, result, error } = e.data;
+    if (_pending[id]) {
+      if (error) _pending[id].reject(new Error(error));
+      else _pending[id].resolve(result);
+      delete _pending[id];
+    }
+  };
+
+  _workerReady = new Promise((res, rej) => {
+    const msgId = ++_id;
+    _pending[msgId] = { resolve: res, reject: rej };
+    _worker.postMessage({ id: msgId, action: 'INIT' });
+  });
+}
+
 
 /* DB HELPERS */
 const dbPut = (s, d) => _workerReady.then(() => new Promise((res, rej) => {
@@ -2284,6 +2305,7 @@ function escHtml(str){if(!str)return"";return String(str).replace(/&/g,"&amp;").
 
 /* EVENT BINDING */
 document.addEventListener('DOMContentLoaded',()=> {
+initWorker();
   document.getElementById('btn-close-void').addEventListener('click',()=>goBack());
   document.getElementById('btn-purge-all').addEventListener('click',purgeAll);
   document.getElementById('btn-back-table').addEventListener('click',()=>goBack());
@@ -2392,5 +2414,6 @@ window.cosmOSPinDisc=async function({title,raw_text,source_link,backlink}){const
 <div class="bottom-bar" id="bottom-bar">
   <div class="bottom-bar-scroll" id="bottom-bar-scroll"></div>
 </div>
+
 </body>
 </html>
