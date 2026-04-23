@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.19.2</title>
+<title>NakedQuantum v0.20.1</title>
 <style>
 :root {
   --bg: #000000;
@@ -380,6 +380,11 @@ select.cosm-input {
 </head>
 <body>
 <canvas id="firefly-canvas"></canvas>
+
+<div id="lock-screen" style="position:fixed;inset:0;background:#000;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+  <div style="color:#a0d8a0;letter-spacing:5px;font-size:11px;font-weight:900;text-transform:uppercase;">NakedQuantum</div>
+  <button id="btn-manual-unlock" style="background:var(--surface2);border:1px solid var(--accent-dim);color:var(--accent);padding:12px 24px;border-radius:20px;font-weight:900;font-size:11px;letter-spacing:1px;text-transform:uppercase;display:none;">Tap to Unlock</button>
+</div>
 
 <div class="nq-header">
   <div class="nq-wordmark" id="nq-wordmark">NakedQuantum</div>
@@ -761,6 +766,7 @@ const firefly=new FF();
 const WORKER_CODE = `
 importScripts('https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js');
 let db = null;
+let encKey = null;
 let saveTimer = null;
 const tableColumns = {}; 
 
@@ -778,7 +784,14 @@ async function initSql() {
   // ADDED MISSING TABLES
   db.run("CREATE TABLE IF NOT EXISTS cosm_mosaic_tiles(id TEXT PRIMARY KEY, discourse_id TEXT, anchors TEXT, created_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_backlinks(id TEXT PRIMARY KEY, discourse_id TEXT, char_name TEXT, created_at INTEGER)");
-  
+  // Encrypted shadow tables
+  db.run("CREATE TABLE IF NOT EXISTS cosm_folders_enc(id TEXT PRIMARY KEY, enc TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS cosm_discourses_enc(id TEXT PRIMARY KEY, enc TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS characters_enc(id TEXT PRIMARY KEY, enc TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS summaries_enc(id TEXT PRIMARY KEY, enc TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS cosm_mosaic_tiles_enc(id TEXT PRIMARY KEY, enc TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS cosm_backlinks_enc(id TEXT PRIMARY KEY, enc TEXT)");
+
   // ADDED TO ARRAY
   ['cosm_folders', 'cosm_discourses', 'characters', 'history', 'summaries', 'cosm_mosaic_tiles', 'cosm_backlinks'].forEach(t => {
     try {
@@ -839,36 +852,102 @@ function toObjects(res) {
   });
 }
 
+async function encryptObj(obj){
+  const iv = self.crypto.getRandomValues(new Uint8Array(12));
+  const ct = await self.crypto.subtle.encrypt(
+    {name:'AES-GCM', iv},
+    encKey,
+    new TextEncoder().encode(JSON.stringify(obj))
+  );
+  return JSON.stringify({iv:Array.from(iv), ct:Array.from(new Uint8Array(ct))});
+}
+
+async function decryptObj(encData){
+  const obj = typeof encData === 'string' ? JSON.parse(encData) : encData;
+  const dec = await self.crypto.subtle.decrypt(
+    {name:'AES-GCM', iv: new Uint8Array(obj.iv)},
+    encKey,
+    new Uint8Array(obj.ct)
+  );
+  return JSON.parse(new TextDecoder().decode(dec));
+}
+
 self.onmessage = async (e) => {
   const { id, action, store, data, field, value } = e.data;
   try {
     if (action === 'INIT') { await initSql(); self.postMessage({ id, result: 'ready' }); return; }
+
+    if (action === 'SET_KEY') {
+      encKey = await self.crypto.subtle.importKey(
+        'raw', new Uint8Array(data.keyBytes),
+        {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']
+      );
+      self.postMessage({ id, result: 'key_set' });
+      return;
+    }
+
+    if (action === 'CLEAR_KEY') {
+      encKey = null;
+      self.postMessage({ id, result: 'key_cleared' });
+      return;
+    }
+
+    const isEnc = encKey && store !== 'history';
+    const targetStore = isEnc ? (store + "_enc") : store;
+
     let result = null;
-    if (action === 'GET_ALL') { result = toObjects(db.exec("SELECT * FROM " + store)); }
-    else if (action === 'GET') { const res = db.exec("SELECT * FROM " + store + " WHERE id=?", [data.id]); result = res.length ? toObjects(res)[0] : null; }
-    else if (action === 'GET_BY_INDEX') { result = toObjects(db.exec("SELECT * FROM " + store + " WHERE " + field + "=?", [value])); }
+    if (action === 'GET_ALL') {
+      const rows = toObjects(db.exec("SELECT * FROM " + targetStore));
+      if (isEnc) {
+        result = await Promise.all(rows.map(async r => r.enc ? await decryptObj(r.enc) : r));
+      } else { result = rows; }
+    }
+    else if (action === 'GET') {
+      const res = db.exec("SELECT * FROM " + targetStore + " WHERE id=?", [data.id]);
+      const row = res.length ? toObjects(res)[0] : null;
+      if (isEnc && row && row.enc) {
+        result = await decryptObj(row.enc);
+      } else { result = row; }
+    }
+    else if (action === 'GET_BY_INDEX') {
+      if (isEnc) {
+        const allRows = toObjects(db.exec("SELECT * FROM " + targetStore));
+        const decrypted = await Promise.all(allRows.map(async r => r.enc ? await decryptObj(r.enc) : r));
+        result = decrypted.filter(r => r && r[field] === value);
+      } else {
+        result = toObjects(db.exec("SELECT * FROM " + store + " WHERE " + field + "=?", [value]));
+      }
+    }
     else if (action === 'PUT') {
       const obj = { ...data };
       if ('isDeleted' in obj) { obj.is_deleted = obj.isDeleted ? 1 : 0; }
-      const validCols = tableColumns[store] || [];
-      const keys = Object.keys(obj).filter(k => validCols.includes(k));
-      
-      // THE FIX: Do not stringify true 'null'
-      const vals = keys.map(k => {
-        const v = obj[k];
-        if (v === null) return null; // Let SQLite handle true emptiness
-        if (typeof v === 'object') return JSON.stringify(v);
-        return v;
-      });
-      
-      const placeholders = keys.map(() => '?').join(',');
-      const updates = keys.filter(k => k !== 'id').map(k => k + "=excluded." + k).join(',');
-      db.run("INSERT INTO " + store + "(" + keys.join(',') + ") VALUES (" + placeholders + ") ON CONFLICT(id) DO UPDATE SET " + updates, vals);
+
+      if (isEnc) {
+        const enc = await encryptObj(obj);
+        db.run("INSERT INTO " + targetStore + "(id, enc) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET enc=excluded.enc", [obj.id, enc]);
+      } else {
+        const validCols = tableColumns[store] || [];
+        const keys = Object.keys(obj).filter(k => validCols.includes(k));
+        const vals = keys.map(k => {
+          const v = obj[k];
+          if (v === null) return null;
+          if (typeof v === 'object') return JSON.stringify(v);
+          return v;
+        });
+        const placeholders = keys.map(() => '?').join(',');
+        const updates = keys.filter(k => k !== 'id').map(k => k + "=excluded." + k).join(',');
+        db.run("INSERT INTO " + store + "(" + keys.join(',') + ") VALUES (" + placeholders + ") ON CONFLICT(id) DO UPDATE SET " + updates, vals);
+      }
       if(saveTimer) clearTimeout(saveTimer);
       saveTimer = setTimeout(save, 500);
       result = 'ok';
     }
-    else if (action === 'DELETE') { db.run("DELETE FROM " + store + " WHERE id=?", [data.id]); save(); result = 'ok'; }
+    else if (action === 'DELETE') { 
+      db.run("DELETE FROM " + store + " WHERE id=?", [data.id]); 
+      try { db.run("DELETE FROM " + store + "_enc WHERE id=?", [data.id]); } catch(e){}
+      save(); 
+      result = 'ok'; 
+    }
     self.postMessage({ id, result });
   } catch(err) { self.postMessage({ id, error: err.message }); }
 };
@@ -923,6 +1002,11 @@ const dbDelete = (s, id) => _workerReady.then(() => new Promise((res, rej) => {
   const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
   _worker.postMessage({ id: msgId, action: 'DELETE', store: s, data: { id } });
 }));
+const setEncryptionKey = (keyBytes) => _workerReady.then(() => new Promise((res, rej) => {
+  const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
+  _worker.postMessage({ id: msgId, action: 'SET_KEY', data: { keyBytes: Array.from(keyBytes) } });
+}));
+
 
 /* FOLDERS */
 const getFolders=()=>dbGetAll("cosm_folders");
@@ -971,26 +1055,77 @@ async function saveMosaicTile(dId,anchors){const e=await getMosaicTile(dId);if(e
 async function deleteMosaicTile(dId){const t=await getMosaicTile(dId);if(t)await dbDelete("cosm_mosaic_tiles",t.id);mosaicCache[dId]=null;}
 async function getBacklink(dId){const l=await dbGetByIndex("cosm_backlinks","discourse_id",dId);return l.length>0?l[0]:null;}
 
+/* PRF UNLOCK */
+const PRF_SALT = new TextEncoder().encode('NakedQuantum_v1_salt').buffer;
+const WA_CRED_KEY = 'nq_prf_cred_id';
+
+function bufToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function b64ToBuf(b64){ return Uint8Array.from(atob(b64), c=>c.charCodeAt(0)).buffer; }
+
+async function unlockWithPRF(){
+  const stored = localStorage.getItem(WA_CRED_KEY);
+  try {
+    const opts = {
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        userVerification: 'required',
+        extensions: { prf: { eval: { first: PRF_SALT } } },
+        timeout: 60000
+      }
+    };
+    if(stored) opts.publicKey.allowCredentials = [{ id: b64ToBuf(stored), type: 'public-key' }];
+
+    const assertion = await navigator.credentials.get(opts);
+    const ext = assertion.getClientExtensionResults();
+
+    if(ext.prf?.results?.first){
+      const keyBytes = new Uint8Array(ext.prf.results.first);
+      await setEncryptionKey(keyBytes);
+      showToast('◈ Sovereign key active');
+      return true;
+    }
+  } catch(e) {
+    if(!stored){
+      try {
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge: crypto.getRandomValues(new Uint8Array(32)),
+            rp: { name: 'NakedQuantum', id: location.hostname },
+            user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'kaja', displayName: 'Kaja' },
+            pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+            authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'required' },
+            extensions: { prf: { eval: { first: PRF_SALT } } },
+            timeout: 60000
+          }
+        });
+        localStorage.setItem(WA_CRED_KEY, bufToB64(cred.rawId));
+        showToast('◈ Face ID registered — unlock now');
+        return await unlockWithPRF();
+      } catch(regErr) {
+        console.error('PRF register failed:', regErr);
+      }
+    }
+  }
+  showToast('⚠ Running without encryption');
+  return false;
+}
 
 /* INIT */
 async function init(){
   await _workerReady;
   
-  // Force the absolute starting state
   currentMode = 'soup';
   currentView = 'soup';
   currentFolderId = null;
   breadcrumbPath = [{id: null, name: '◈ The Soup'}];
   
   updateHeaderButtons();
-  showPanel('view-soup'); // CRITICAL: This wakes up the canvas
+  showPanel('view-soup'); 
   await renderTableView();
   
   document.getElementById('input-api-key').value=localStorage.getItem('nq_api_key')||'';
   document.getElementById('input-model').value=localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';
 }
-
-
 
 /*Naked Handle*/
 
@@ -999,10 +1134,8 @@ async function handleSend() {
   const text = input.value.trim();
   if (!text) return;
 
-  // 1. Pull Coordinates from localStorage
   const apiKey = localStorage.getItem('nq_api_key');
   const activeModel = localStorage.getItem('nq_model') || "gpt-4o"; 
-  // We use a base URL and append the specific path
   const baseUrl = localStorage.getItem('nq_base_url') || "https://openrouter.ai/api/v1";
   const strikeUrl = `${baseUrl}/chat/completions`;
 
@@ -1011,16 +1144,13 @@ async function handleSend() {
     return;
   }
 
-  // UI: Show user message
   appendMessage('user', text);
   input.value = '';
 
-  // 2. Prepare History (Pulled from IndexedDB for depth)
   const historyData = await getFromDB('history', 'current_thread') || { messages: [] };
   historyData.messages.push({ role: 'user', content: text });
 
   try {
-    // 3. The Strike
     const response = await fetch(strikeUrl, {
       method: "POST",
       headers: {
@@ -1036,12 +1166,9 @@ async function handleSend() {
     });
 
     const data = await response.json();
-    
     if (data.error) throw new Error(data.error.message);
-
     const aiText = data.choices[0].message.content;
 
-    // 4. Update UI & Witnessing History
     appendMessage('assistant', aiText);
     historyData.messages.push({ role: 'assistant', content: aiText });
     await saveToDB('history', { id: 'current_thread', messages: historyData.messages });
@@ -1104,6 +1231,7 @@ async function confirmBurnDisc(){
   closeOverlay();
   showToast(`🔥 Burned — ${newMessages.length} chapters`);
 }
+
 /* PERSONA FUNCTIONS */
 async function openPersonaView(){
   const p=getGlobalPersona();
@@ -1210,7 +1338,6 @@ function enterSelectMode(item){
   selectMode=true;
   selectedItems=new Set();
   selectedItems.add(item.id);
-  // Render after population
   if(currentMode==='soup') renderTableView().then(()=>renderSelectBar());
   else renderSanctuaryView().then(()=>renderSelectBar());
 }
@@ -1257,7 +1384,6 @@ function toggleSelectItem(id){
   else selectedItems.add(id);
   if(selectedItems.size===0){exitSelectMode();return;}
   renderSelectBar();
-  // Force UI update to show gold rings
   if(currentMode==='soup') renderTableView();
   else renderSanctuaryView();
 }
@@ -1276,8 +1402,6 @@ async function batchDelete(){
   exitSelectMode();
   showToast(`Moved to Void ◌`);
 }
-
-
 
 async function batchMove(){
   if(!selectedItems.size)return;
@@ -1336,7 +1460,6 @@ function showPanel(id){
   if(active)active.classList.remove('hidden');
   currentView=id.replace('view-','');
   
-  // Show bottom bar only on main views
   if(id==='view-soup'){renderDefaultBar('soup');}
   else if(id==='view-sanctuary'){renderDefaultBar('sanctuary');}
   else{hideBottomBar();}
@@ -1349,6 +1472,7 @@ function showPanel(id){
 function updateHeaderButtons(){
   const c=document.getElementById('header-actions');
   c.innerHTML=`<button class="hdr-btn" id="hdr-void">○</button><button class="hdr-btn" id="hdr-export">⩔</button><label class="hdr-import-label">⩓<input type="file" accept=".json" id="import-json-input" style="display:none;"></label><button class="hdr-btn" id="hdr-sync">∞</button><button class="hdr-btn" id="hdr-search">⌖</button>`;
+  
   document.getElementById('hdr-void').onclick=()=>openVoidView();
   document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
   document.getElementById('import-json-input').onchange=e=>importJSON(e);
@@ -1364,10 +1488,7 @@ async function goBack() {
   if (currentView === 'lighthouse' && currentDiscourseId) {
     await saveCurrentDiscourse(true);
   }
-  
-  // Ensure we aren't navigating back to a 'null' state that breaks the renderer
   if (!currentFolderId) currentFolderId = null; 
-
   if (currentMode === 'soup') { 
     showPanel('view-soup'); 
     await renderTableView(); 
@@ -1394,7 +1515,6 @@ async function renderTableView() {
   surface.innerHTML = '';
   renderBreadcrumb();
 
-  // The Quantum Corrector: Normalizes all forms of "empty"
   const safeMatch = (a, b) => {
     const isANull = (!a || String(a) === 'null' || String(a) === 'root' || String(a) === 'undefined');
     const isBNull = (!b || String(b) === 'null' || String(b) === 'root' || String(b) === 'undefined');
@@ -1410,7 +1530,6 @@ async function renderTableView() {
   const allF = (await getFolders()) || [];
   const allD = (await getDiscourses()) || [];
 
-  // Filter using safeMatch to catch the trapped data
   const cf = allF.filter(f => !f.isDeleted && safeMatch(f.parent_id, currentFolderId));
   const notes = allD.filter(d => !d.isDeleted && d.item_type === 'note' && safeMatch(d.folder_id, currentFolderId));
   const discs = allD.filter(d => !d.isDeleted && d.item_type !== 'note' && safeMatch(d.folder_id, currentFolderId));
@@ -1485,7 +1604,6 @@ async function buildDiscourseCard(d){
 
   card.addEventListener('click', () => {
     if (window.longPressConsumed) { window.longPressConsumed = false; return; }
-    // FIX: Using direct variable check, not window.
     if (typeof selectMode !== 'undefined' && selectMode) { toggleSelectItem(d.id); return; }
     openDiscourse(d.id);
   });
@@ -1577,7 +1695,6 @@ async function newDiscourseInCurrent(){
 }
 
 function handleNewDiscourse() {
-  // Use a loose check to catch null, undefined, or empty strings
   if (!currentFolderId || currentFolderId === 'root') {
     newDiscourseAtSoup();
   } else {
@@ -1587,24 +1704,17 @@ function handleNewDiscourse() {
 
 async function newDiscourseAtSoup() {
   const folders = await getFolders();
-  // Safe filtering for existing Unknown folders
   const count = folders.filter(f => f.name && f.name.startsWith('Unknown_')).length + 1;
   const fn = `Unknown_${count}`;
   
-  // 1. Create the folder at the root (null)
   const fId = await createFolder(fn, null);
-  
-  // 2. Set context to the NEW folder
   currentFolderId = fId;
-  
-  // 3. Create the discourse INSIDE that new folder
   const disc = await createDiscourse({
     title: "Untitled Discourse",
     raw_text: "",
     folder_id: fId
   });
   
-  // 4. Update the path and jump in
   breadcrumbPath = [{id: null, name: '◈ The Soup'}, {id: fId, name: fn}];
   await openDiscourse(disc.id);
   
@@ -1638,13 +1748,13 @@ async function renderSanctuaryView(){
   const g=document.createElement('div');g.className='cards-grid';
   for(const c of filtered){
         const card=document.createElement('div');card.className='character-card card';
-    if(selectedItems.has(c.id)) card.classList.add('card-selected'); // <-- Add this line
+    if(selectedItems.has(c.id)) card.classList.add('card-selected'); 
     
     card.innerHTML=`<div><div class="char-card-name">${escHtml(c.name)}</div><div class="char-card-role">${escHtml(c.role||'No role assigned')}</div></div><div class="char-card-footer"><div class="char-card-meta">${new Date(c.updated_at).toLocaleDateString()}</div></div>`;
     
     card.addEventListener('click',()=>{
       if(longPressConsumed){longPressConsumed=false;return;}
-      if(selectMode){toggleSelectItem(c.id);return;} // <-- Add this line to intercept clicks
+      if(selectMode){toggleSelectItem(c.id);return;} 
       openChat(c.id);
     });
 
@@ -1723,7 +1833,7 @@ async function openChat(id){
   const history=await dbGetByIndex('history','charId',id);
   history.forEach(h=>appendChatMessage(h.role,h.content));
   showPanel('view-chat');
-chatPersonaOverride=char.player_role_id||null;
+chatPersonaOverride=c.player_role_id||null;
 updatePersonaPill();
 
 }
@@ -1734,7 +1844,6 @@ async function handleChatSend(){
   input.value='';input.style.height='auto';
   appendChatMessage('user',text);
   
-  // Save user message FIRST before AI call
   await dbPut('history',{charId:activeCharId,role:'user',content:text,created_at:Date.now()});
   
   const char=await getCharacter(activeCharId);
@@ -1995,7 +2104,6 @@ async function confirmNewFolder(){
 }
 
 /* MANAGEMENT */
-/* MANAGEMENT */
 function openManagementModal(item){
   mgmtItem=item;
   const pills=[
@@ -2112,7 +2220,6 @@ let modelHistory = JSON.parse(localStorage.getItem('nq_model_history')) || [
   'google/gemini-2.0-flash-001'
 ];
 
-// 2. Refresh the Selector
 function renderModelSelect() {
   const select = document.getElementById('input-model');
   const currentModel = localStorage.getItem('nq_model');
@@ -2121,13 +2228,12 @@ function renderModelSelect() {
   modelHistory.forEach(model => {
     const opt = document.createElement('option');
     opt.value = model;
-    opt.innerText = model; // Full ID for clarity
+    opt.innerText = model;
     if(model === currentModel) opt.selected = true;
     select.appendChild(opt);
   });
 }
 
-// 3. Summon New Engine
 function summonNewModel() {
   const input = document.getElementById('summon-input');
   const val = input.value.trim();
@@ -2137,13 +2243,12 @@ function summonNewModel() {
     modelHistory.push(val);
     localStorage.setItem('nq_model_history', JSON.stringify(modelHistory));
     renderModelSelect();
-    document.getElementById('input-model').value = val; // Auto-select it
+    document.getElementById('input-model').value = val;
     input.value = '';
     showToast("Engine Summoned");
   }
 }
 
-// 4. Targeted Purge
 function removeActiveModel() {
   const select = document.getElementById('input-model');
   const target = select.value;
@@ -2159,35 +2264,22 @@ function removeActiveModel() {
   showToast("Purged to the Abyss");
 }
 
-// 5. Update the Open Settings trigger
 function openSettingsModal(){
-  // 1. Fill the inputs
   document.getElementById('input-api-key').value = localStorage.getItem('nq_api_key') || '';
   document.getElementById('input-base-url').value = localStorage.getItem('nq_base_url') || 'https://openrouter.ai/api/v1';
-  
-  // 2. Refresh the engine list
   renderModelSelect();
-  
-  // 3. Show the UI
   document.getElementById('settings-modal').classList.add('visible');
   document.getElementById('cosm-overlay').classList.add('active');
 }
-
-
-// Triple-check your closeOverlay function exists:
 
 function closeOverlay(){
   document.getElementById("cosm-overlay").classList.remove("active");
   ['folder-modal','rename-modal','move-modal',
  'global-search-modal','capture-modal','settings-modal',
  'burn-disc-modal','role-modal','persona-select-modal'
-]
-
-  .forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("visible");});
+  ].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("visible");});
   mgmtItem=null;
 }
-
-
 
 /* EDITOR */
 function setEditorMode(mode){
@@ -2283,7 +2375,7 @@ function startLP(e,card,item){
   longPressTimer=setTimeout(()=>{
     isLongPress=true;longPressConsumed=true;
     card.classList.remove('long-pressing');
-    card.classList.add('card-selected'); // stays gold
+    card.classList.add('card-selected'); 
     mgmtItem=item;
     openManagementModal(item);
   },LONG_PRESS_DURATION);
@@ -2347,15 +2439,14 @@ document.addEventListener('click',e=>{
   document.getElementById('btn-capture-confirm').addEventListener('click',confirmQuickCapture);
   document.getElementById('capture-body').addEventListener('input',function(){const t=document.getElementById('capture-title');if(t.dataset.userEdited==='true')return;const w=this.value.split('\n')[0].trim().split(/\s+/).filter(Boolean).slice(0,4).join(' ');t.value=w||'';});
   document.getElementById('capture-title').addEventListener('input',function(){this.dataset.userEdited='true';});
-    // --- CLEAN SETTINGS WIRING ---
-  // Update your existing Confirm Listener
+
 document.getElementById('btn-burn-cancel').addEventListener('click',closeOverlay);
 document.getElementById('btn-burn-confirm').addEventListener('click',confirmBurnDisc);
 
 document.getElementById('btn-settings-confirm').addEventListener('click', () => {
   const k = document.getElementById('input-api-key').value.trim();
   const u = document.getElementById('input-base-url').value.trim();
-  const m = document.getElementById('input-model').value; // Grabs the selected option
+  const m = document.getElementById('input-model').value; 
   localStorage.setItem('nq_api_key', k);
   localStorage.setItem('nq_base_url', u);
   localStorage.setItem('nq_model', m);
@@ -2399,13 +2490,44 @@ document.getElementById('btn-add-manual-memory').addEventListener('click',addMan
   });
 
   document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goBack();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
-  // Final boot trigger
-  init().catch(err => {
-    console.error("BOOT CRASH:", err);
-    alert("The Abyss is blocked. Check the console.");
-  });
-});
+  
+  // Final boot trigger with Gatekeeper
+  async function bootApp() {
+    const lockScreen = document.getElementById('lock-screen');
+    const manualBtn = document.getElementById('btn-manual-unlock');
+    
+    try {
+      // 1. Auto-trigger Face ID instantly on load
+      const unlocked = await unlockWithPRF();
+      
+      if (unlocked) {
+        // Success: Destroy lock screen and boot app
+        lockScreen.style.display = 'none';
+        await init();
+      } else {
+        // Failed/Canceled: Show manual button so user isn't permanently trapped
+        manualBtn.style.display = 'block';
+        manualBtn.onclick = async () => {
+          const manualUnlock = await unlockWithPRF();
+          if (manualUnlock) {
+            lockScreen.style.display = 'none';
+            await init();
+          } else {
+            if(confirm("Encryption failed. Enter unencrypted offline mode?")) {
+              lockScreen.style.display = 'none';
+              await init();
+            }
+          }
+        };
+      }
+    } catch (err) {
+      console.error("BOOT CRASH:", err);
+      alert("The Abyss is blocked. Check the console.");
+    }
+  }
 
+  bootApp();
+});
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 
