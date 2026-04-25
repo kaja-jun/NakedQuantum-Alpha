@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.21.4</title>
+<title>NakedQuantum v0.22.7</title>
 <style>
 :root {
   --bg: #000000;
@@ -166,9 +166,9 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .fmt-btn.code-btn { font-family: 'Menlo', monospace; font-size: 11px; }
 .fmt-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
 
-.content-textarea { flex: 1; width: 100%; min-height: 320px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 12px; font-size: 15px; line-height: 1.8; outline: none; resize: none; font-family: var(--font-serif); caret-color: var(--accent); -webkit-overflow-scrolling: touch; }
+.content-textarea { flex: 1; width: 100%; min-height: unset; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 12px; font-size: 15px; line-height: 1.8; outline: none; resize: none; font-family: var(--font-serif); caret-color: var(--accent); -webkit-overflow-scrolling: touch; }
 .content-textarea:focus { border-color: var(--accent-dim); }
-.content-view { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; font-size: 15px; line-height: 1.8; font-family: var(--font-serif); color: var(--text); min-height: 200px; }
+.content-view {display: none;background: var(--surface);border: 1px solid var(--border);border-radius: 12px;padding: 20px;font-size: 15px;line-height: 1.8;font-family: var(--font-serif);color: var(--text);overflow-wrap: break-word;word-break: break-word;}
 .content-view h1 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 0 0 16px; }
 .content-view h2 { font-size: 18px; margin: 20px 0 10px; }
 .content-view h3 { font-size: 15px; color: var(--accent); margin: 16px 0 8px; }
@@ -391,7 +391,6 @@ select.cosm-input {
 .bar-pill.danger { border-color: var(--danger); }
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
 </head>
 <body>
 <canvas id="firefly-canvas"></canvas>
@@ -438,7 +437,7 @@ select.cosm-input {
           <button class="view-toggle-btn active" id="btn-write">✎</button>
           <button class="view-toggle-btn" id="btn-view">ʘ</button>
         </div>
-        <button class="tbtn" id="btn-export-docx">W ↓</button>
+      <button class="tbtn" id="btn-export-html">H ↓</button>
         <button class="tbtn" id="btn-export-md">M ↓</button>
         <button class="tbtn" id="btn-export-pdf">P ↓</button>
         <button class="tbtn gold" id="btn-extract">◈</button>
@@ -502,7 +501,7 @@ select.cosm-input {
           <div class="forge-section-content">
             <div class="forge-input-group">
               <span class="forge-label">Name</span>
-              <input class="cosm-input" id="forge-name" placeholder="Character Name...">
+              <input class="cosm-input" id="forge-name" placeholder="Character Name..." autocomplete="off">
             </div>
             <div class="forge-input-group">
               <span class="forge-label">Role / Tagline</span>
@@ -716,6 +715,19 @@ select.cosm-input {
     </div>
     <input type="text" id="export-key-display" class="cosm-input" readonly style="display:none; margin-top:8px; text-align:center; font-family:monospace; font-size:11px; color:#a0d8a0; border-color:#a0d8a0;">
   </div>
+  <div class="settings-group" style="margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+    <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Supabase Sync (The Void)</label>
+    <input type="text" id="input-supa-url" class="cosm-input" placeholder="https://xyz.supabase.co" style="margin-top:8px;">
+    <input type="password" id="input-supa-key" class="cosm-input" placeholder="Anon Public Key" style="margin-top:8px;">
+  </div>
+  <div class="settings-group" style="margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+    <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Akashic Records (Cold Backup)</label>
+    <p style="font-size:10px; color:var(--muted); line-height:1.4; margin:4px 0 8px;">Disaster recovery. This overwrites your local fragments.</p>
+    <div style="display:flex; gap:8px;">
+      <button onclick="backupToAkashic()" style="background:var(--surface2); color:var(--text); border:1px solid var(--border); flex:1; height:40px; border-radius:8px; font-weight:700; font-size:11px;">Push to R2</button>
+      <button onclick="restoreFromAkashic()" style="background:#1a0000; color:var(--danger); border:1px solid #330000; flex:1; height:40px; border-radius:8px; font-weight:900; font-size:11px;">Pull from R2</button>
+    </div>
+  </div>
 
   <div class="modal-buttons" style="margin-top:25px;">
     <button class="modal-btn-cancel" onclick="closeOverlay()">Cancel</button>
@@ -792,7 +804,8 @@ function savePersonaRoles(roles){
 class FF{constructor(){this.canvas=document.getElementById('firefly-canvas');this.ctx=this.canvas.getContext('2d');this.p=[];this.d=15;this.r();window.addEventListener('resize',()=>this.r());this.a();}r(){this.canvas.width=innerWidth;this.canvas.height=innerHeight;}sd(l){this.d=Math.min(60,15+Math.floor(l/200));}a(){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);while(this.p.length<this.d)this.p.push({x:Math.random()*this.canvas.width,y:Math.random()*this.canvas.height,s:Math.random()*1.5+.2,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,a:Math.random()*.4+.1,p:Math.random()*.01+.002});if(this.p.length>this.d)this.p.splice(this.d);this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.p;if(p.a>.6||p.a<.1)p.p*=-1;if(p.x<0)p.x=this.canvas.width;if(p.x>this.canvas.width)p.x=0;if(p.y<0)p.y=this.canvas.height;if(p.y>this.canvas.height)p.y=0;this.ctx.beginPath();this.ctx.arc(p.x,p.y,p.s,0,Math.PI*2);this.ctx.fillStyle=`rgba(200,160,80,${p.a})`;this.ctx.fill();});requestAnimationFrame(()=>this.a());}}
 const firefly=new FF();
 
-/* DB — ABYSS-PROOF WORKER (NULL FIXED) */
+/* DB — ABYSS-PROOF WORKER (NULL FIXED)- Nuclear fix 
+Auto increment Time-bomb & PUT code endless echo */
 const WORKER_CODE = `
 importScripts('https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js');
 let db = null;
@@ -805,24 +818,37 @@ async function initSql() {
   const existing = await loadFromOPFS();
   db = existing ? new SQL.Database(existing) : new SQL.Database();
   
+  // THE PURGE: We must destroy the old integer-based tables to rebuild them as TEXT
+  // ONE-TIME MIGRATION: only drop if still old INTEGER schema
+try {
+  const info = db.exec("PRAGMA table_info(history)");
+  if (info.length) {
+    const idCol = info[0].values.find(v => v[1] === 'id');
+    if (idCol && idCol[2] === 'INTEGER') {
+      db.run("DROP TABLE IF EXISTS history");
+      db.run("DROP TABLE IF EXISTS summaries");
+    }
+  }
+} catch(e) {}
+
   db.run("CREATE TABLE IF NOT EXISTS cosm_folders(id TEXT PRIMARY KEY, name TEXT, parent_id TEXT, created_at INTEGER, updated_at INTEGER, is_deleted INTEGER DEFAULT 0)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_discourses(id TEXT PRIMARY KEY, title TEXT, raw_text TEXT, folder_id TEXT, source_link TEXT, item_type TEXT, tags TEXT, is_deleted INTEGER DEFAULT 0, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS characters(id TEXT PRIMARY KEY, name TEXT, role TEXT, backstory TEXT, personality TEXT, lorebook TEXT, scenario TEXT, inclination TEXT, relationships TEXT, pc_info TEXT, player_role_id TEXT, image TEXT, temperature REAL DEFAULT 1, is_deleted INTEGER DEFAULT 0, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)");
-  db.run("CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY AUTOINCREMENT, charId TEXT, role TEXT, content TEXT, created_at INTEGER)");
-  db.run("CREATE TABLE IF NOT EXISTS summaries(id TEXT PRIMARY KEY, charId TEXT, text TEXT, type TEXT, created_at INTEGER)");
   
-  // ADDED MISSING TABLES
+  // THE FIX: History and Summaries now use TEXT IDs (UUID/Timestamps)
+  db.run("CREATE TABLE IF NOT EXISTS history(id TEXT PRIMARY KEY, charId TEXT, role TEXT, content TEXT, created_at INTEGER)");
+  db.run("CREATE TABLE IF NOT EXISTS summaries(id TEXT PRIMARY KEY, charId TEXT, text TEXT, type TEXT, created_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_mosaic_tiles(id TEXT PRIMARY KEY, discourse_id TEXT, anchors TEXT, created_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_backlinks(id TEXT PRIMARY KEY, discourse_id TEXT, char_name TEXT, created_at INTEGER)");
-  // Encrypted shadow tables
+  
   db.run("CREATE TABLE IF NOT EXISTS cosm_folders_enc(id TEXT PRIMARY KEY, enc TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_discourses_enc(id TEXT PRIMARY KEY, enc TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS characters_enc(id TEXT PRIMARY KEY, enc TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS summaries_enc(id TEXT PRIMARY KEY, enc TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_mosaic_tiles_enc(id TEXT PRIMARY KEY, enc TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_backlinks_enc(id TEXT PRIMARY KEY, enc TEXT)");
+  db.run("CREATE TABLE IF NOT EXISTS history_enc(id TEXT PRIMARY KEY, enc TEXT)");
 
-  // ADDED TO ARRAY
   ['cosm_folders', 'cosm_discourses', 'characters', 'history', 'summaries', 'cosm_mosaic_tiles', 'cosm_backlinks'].forEach(t => {
     try {
       const info = db.exec("PRAGMA table_info(" + t + ")");
@@ -830,9 +856,7 @@ async function initSql() {
     } catch(e) {}
   });
 
-  // Purge the physical 'root' folder
   db.run("DELETE FROM cosm_folders WHERE id='root'");
-  
   await save();
 }
 
@@ -849,14 +873,11 @@ async function save() {
     const data = db.export();
     const root = await navigator.storage.getDirectory();
     const fh = await root.getFileHandle('nq.db', { create: true });
-    
     try {
-      // Standard Chrome/Desktop approach
       const writable = await fh.createWritable();
       await writable.write(data);
       await writable.close();
     } catch (err) {
-      // Apple iOS / Safari strictly requires this approach in workers
       const accessHandle = await fh.createSyncAccessHandle();
       accessHandle.write(data);
       accessHandle.flush();
@@ -916,28 +937,23 @@ self.onmessage = async (e) => {
       return;
     }
 
-    if (action === 'CLEAR_KEY') {
-      encKey = null;
-      self.postMessage({ id, result: 'key_cleared' });
-      return;
-    }
+    if (action === 'CLEAR_KEY') { encKey = null; self.postMessage({ id, result: 'key_cleared' }); return; }
 
-    const isEnc = encKey && store !== 'history';
+    // THE FIX: History gets encrypted now too for absolute privacy
+    const isEnc = encKey; 
     const targetStore = isEnc ? (store + "_enc") : store;
 
     let result = null;
     if (action === 'GET_ALL') {
       const rows = toObjects(db.exec("SELECT * FROM " + targetStore));
-      if (isEnc) {
-        result = await Promise.all(rows.map(async r => r.enc ? await decryptObj(r.enc) : r));
-      } else { result = rows; }
+      if (isEnc) { result = await Promise.all(rows.map(async r => r.enc ? await decryptObj(r.enc) : r)); } 
+      else { result = rows; }
     }
     else if (action === 'GET') {
       const res = db.exec("SELECT * FROM " + targetStore + " WHERE id=?", [data.id]);
       const row = res.length ? toObjects(res)[0] : null;
-      if (isEnc && row && row.enc) {
-        result = await decryptObj(row.enc);
-      } else { result = row; }
+      if (isEnc && row && row.enc) { result = await decryptObj(row.enc); } 
+      else { result = row; }
     }
     else if (action === 'GET_BY_INDEX') {
       if (isEnc) {
@@ -966,8 +982,11 @@ self.onmessage = async (e) => {
         });
         const placeholders = keys.map(() => '?').join(',');
         const updates = keys.filter(k => k !== 'id').map(k => k + "=excluded." + k).join(',');
+        
+        // THE FIX: ON CONFLICT UPDATE restored for history
         db.run("INSERT INTO " + store + "(" + keys.join(',') + ") VALUES (" + placeholders + ") ON CONFLICT(id) DO UPDATE SET " + updates, vals);
       }
+
       if(saveTimer) clearTimeout(saveTimer);
       saveTimer = setTimeout(save, 500);
       result = 'ok';
@@ -982,7 +1001,6 @@ self.onmessage = async (e) => {
   } catch(err) { self.postMessage({ id, error: err.message }); }
 };
 `;
-
 
 let _id = 0;
 const _pending = {};
@@ -1195,6 +1213,13 @@ async function unlockWithFallbackKey() {
 async function init(){
   await _workerReady;
   
+  // Ask iOS nicely to not erase us
+  if(navigator.storage&&navigator.storage.persist){
+    navigator.storage.persist().then(granted=>{
+      if(granted)console.log('◈ Storage persistence granted');
+    });
+  }
+  
   currentMode = 'soup';
   currentView = 'soup';
   currentFolderId = null;
@@ -1205,8 +1230,9 @@ async function init(){
   await renderTableView();
   
   document.getElementById('input-api-key').value=localStorage.getItem('nq_api_key')||'';
-  document.getElementById('input-model').value=localStorage.getItem('nq_model')||'google/gemini-2.0-flash-001';
+  document.getElementById('input-model').value=localStorage.getItem('nq_model')||'deepseek/deepseek-v4-flash';
 }
+
 
 /*Naked Handle*/
 
@@ -1416,7 +1442,6 @@ function renderDefaultBar(mode) {
   }
 }
 
-
 function enterSelectMode(item){
   selectMode=true;
   selectedItems=new Set();
@@ -1424,7 +1449,6 @@ function enterSelectMode(item){
   if(currentMode==='soup') renderTableView().then(()=>renderSelectBar());
   else renderSanctuaryView().then(()=>renderSelectBar());
 }
-
 
 function renderSelectBar(){
   const count=selectedItems.size;
@@ -1460,7 +1484,6 @@ function exitSelectMode(){
   else renderSanctuaryView();
   renderDefaultBar(currentMode);
 }
-
 
 function toggleSelectItem(id){
   if(selectedItems.has(id))selectedItems.delete(id);
@@ -1513,7 +1536,6 @@ async function batchBurn(){
   await openBurnDiscModal();
 }
 
-
 /* LONG PRESS WORDMARK */
 let wpt=null;
 const wEl=document.getElementById('nq-wordmark');
@@ -1550,7 +1572,6 @@ function showPanel(id){
   firefly.sd(id==='view-lighthouse'||id==='view-chat'?80:20);
 }
 
-
 /* HEADER BUTTONS */
 function updateHeaderButtons(){
   const c=document.getElementById('header-actions');
@@ -1559,17 +1580,17 @@ function updateHeaderButtons(){
   document.getElementById('hdr-void').onclick=()=>openVoidView();
   document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
   document.getElementById('import-json-input').onchange=e=>importJSON(e);
-  document.getElementById('hdr-sync').onclick=()=>{showToast('Syncing with Akashic...');restoreFromAkashic();};
+  document.getElementById('hdr-sync').onclick = handleSync;
   document.getElementById('hdr-search').onclick=()=>{
     if(currentMode==='soup')openGlobalSearch();
     else openSanctuarySearch();
   };
 }
 
-
 async function goBack() {
   if (currentView === 'lighthouse' && currentDiscourseId) {
     await saveCurrentDiscourse(true);
+    mosaicCache = {};
   }
   if (!currentFolderId) currentFolderId = null; 
   if (currentMode === 'soup') { 
@@ -1581,7 +1602,6 @@ async function goBack() {
   }
 }
 
-
 function openSanctuarySearch(){
   const modal=document.getElementById('global-search-modal');
   document.getElementById('global-search-input').placeholder='Search characters...';
@@ -1590,7 +1610,6 @@ function openSanctuarySearch(){
   modal.classList.add('visible');
   document.getElementById('cosm-overlay').classList.add('active');
 }
-
 
 async function renderTableView() {
   const surface = document.getElementById('table-surface');
@@ -1673,7 +1692,6 @@ async function renderTableView() {
   }
 }
 
-
 async function buildDiscourseCard(d){
   const tile = await getMosaicTile(d.id), hasMosaic = tile && tile.anchors && tile.anchors.length > 0;
   const date = new Date(d.updated_at||d.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
@@ -1703,7 +1721,6 @@ async function buildDiscourseCard(d){
   return card;
 }
 
-
 /* BREADCRUMB */
 function renderBreadcrumb(){
   const bar=document.getElementById('breadcrumb-bar');bar.innerHTML='';
@@ -1725,13 +1742,11 @@ function enterFolder(id, name){
   renderTableView();
 }
 
-
 function navToBc(idx){
   breadcrumbPath=breadcrumbPath.slice(0,idx+1);
   currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;
   renderTableView();
 }
-
 
 async function openDiscourse(id){
   if(currentDiscourseId&&id!==currentDiscourseId)await saveCurrentDiscourse(true);
@@ -1818,7 +1833,6 @@ async function deleteCurrentDiscourse() {
   showToast("Moved to Void ◌");
 }
 
-
 /* SANCTUARY */
 async function renderSanctuaryView(){
   const surface=document.getElementById('sanctuary-surface');surface.innerHTML='';
@@ -1877,7 +1891,6 @@ roles.forEach(r=>{
   if(r.id===c.player_role_id)o.selected=true;
   roleSel.appendChild(o);
 });
-
 }
 
 async function saveCharacterForge(){
@@ -1918,33 +1931,42 @@ async function openChat(id){
   showPanel('view-chat');
 chatPersonaOverride=c.player_role_id||null;
 updatePersonaPill();
-
 }
 
+let isSending = false;
 async function handleChatSend(){
-  const input=document.getElementById('chat-input');
-  const text=input.value.trim();if(!text||!activeCharId)return;
-  input.value='';input.style.height='auto';
+  if(isSending) return;
+  isSending = true;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text ||!activeCharId){ isSending=false; return; }
+  input.value=''; input.style.height='auto';
   appendChatMessage('user',text);
-  
-  await dbPut('history',{charId:activeCharId,role:'user',content:text,created_at:Date.now()});
-  
-  const char=await getCharacter(activeCharId);
-  const history=await dbGetByIndex('history','charId',activeCharId);
-  const response=await callAIForChat(char,history,text);
-  
+
+  const now = Date.now();
+  // THE FIX: Generating a highly unique string ID to prevent sync collisions
+  const userMsgId = 'h_' + crypto.randomUUID();
+  await dbPut('history', { id: userMsgId, charId: activeCharId, role: 'user', content: text, created_at: now });
+
+  const char = await getCharacter(activeCharId);
+  let history = await dbGetByIndex('history','charId',activeCharId);
+  history = history.map(h=>({...h})).sort((a,b)=>a.created_at-b.created_at);
+
+  const response = await callAIForChat(char, history);
+
   if(response){
     appendChatMessage('char',response);
-    await dbPut('history',{charId:activeCharId,role:'char',content:response,created_at:Date.now()});
+    const aiMsgId = 'h_' + crypto.randomUUID();
+    await dbPut('history', { id: aiMsgId, charId: activeCharId, role: 'char', content: response, created_at: now+1 });
   }
+  isSending = false;
 }
-
 
 async function summariseHistory(charId,messages){
   const key=localStorage.getItem("nq_api_key")||"";
   if(!key||messages.length<6)return null;
   try{
-    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",max_tokens:300,messages:[{role:"system",content:"Compress this conversation into 5-8 bullet points. Capture emotional tone, key decisions, unresolved tensions, named facts. Ruthlessly concise. No preamble."},{role:"user",content:messages.map(m=>`${m.role}: ${m.content}`).join("\n")}]})});
+    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"deepseek/deepseek-v4-flash",max_tokens:300,messages:[{role:"system",content:"Compress this conversation into 5-8 bullet points. Capture emotional tone, key decisions, unresolved tensions, named facts. Ruthlessly concise. No preamble."},{role:"user",content:messages.map(m=>`${m.role}: ${m.content}`).join("\n")}]})});
     const data=await res.json();
     const summary=data.choices?.[0]?.message?.content||null;
     if(summary){
@@ -2075,26 +2097,26 @@ function openPersonaPillSelector(){
   document.getElementById('cosm-overlay').classList.add('active');
 }
 
-
-async function callAIForChat(char,history,text){
+// Notice 'text' is removed from parameters
+async function callAIForChat(char, history){
   const key=localStorage.getItem("nq_api_key")||"";
   if(!key){showToast("Add API Key in Settings");return null;}
 
-  if(history.length>0&&history.length%15===0){
-    await summariseHistory(char.id,history.slice(-15));
+  if(history.length>=15 && history.length%5===0){
+  summariseHistory(char.id, history.slice(-20)).catch(()=>{});
   }
 
   const memoryContext=await getMemoryContext(char.id);
   const memoryBlock=memoryContext?`\n\n[MEMORY FRAGMENTS]\n${memoryContext}`:"";
 
   const p=getGlobalPersona();
-const roles=getPersonaRoles();
-const roleId=chatPersonaOverride||char.player_role_id||null;
-const assignedRole=roleId?roles.find(r=>r.id===roleId):null;
+  const roles=getPersonaRoles();
+  const roleId=chatPersonaOverride||char.player_role_id||null;
+  const assignedRole=roleId?roles.find(r=>r.id===roleId):null;
 
-const personaBlock=`\n\nPlayer is ${p.bio||'the user'}. ${p.personality?'Personality: '+p.personality+'.':''} ${assignedRole?'In this encounter they are: '+assignedRole.description+'.':''}`;
+  const personaBlock=`\n\nPlayer is ${p.bio||'the user'}. ${p.personality?'Personality: '+p.personality+'.':''} ${assignedRole?'In this encounter they are: '+assignedRole.description+'.':''}`;
 
-const sys=`You are ${char.name}. ${char.role}.
+  const sys=`You are ${char.name}. ${char.role}.
 Personality: ${char.personality}.
 Backstory: ${char.backstory}.
 Lore: ${char.lorebook}.
@@ -2103,15 +2125,59 @@ Inclination: ${char.inclination}.
 Relationships: ${char.relationships}.
 Respond in character, concise and evocative.${personaBlock}${memoryBlock}`;
 
-  const msgs=[{role:'system',content:sys},...history.slice(-12).map(h=>({role:h.role==='user'?'user':'assistant',content:h.content})),{role:'user',content:text}];
+  // 1. FORCE SORT BY TIME (IndexedDB gets messy)
+  const sortedHistory = [...history].sort((a,b)=>a.created_at-b.created_at).slice(-12);
+
+  // 2. THE SANITIZER: Collapse consecutive messages to appease Gemini
+  let safeMsgs = [];
+  for (const h of sortedHistory) {
+    const role = h.role === 'user' ? 'user' : 'assistant';
+    const content = h.content ? h.content.trim() : "...";
+    if (!content) continue;
+
+    if (safeMsgs.length > 0 && safeMsgs[safeMsgs.length - 1].role === role) {
+       safeMsgs[safeMsgs.length - 1].content += "\n\n" + content;
+    } else {
+       safeMsgs.push({ role, content });
+    }
+  }
+
+  // 3. Gemini demands the first non-system message be 'user'
+  if (safeMsgs.length > 0 && safeMsgs[0].role !== 'user') {
+    safeMsgs.shift(); 
+  }
+
+  const msgs=[ {role:'system', content:sys}, ...safeMsgs ];
 
   try{
-    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",messages:msgs,temperature:char.temperature||1.0})});
+    const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+      method:"POST",
+      headers:{
+        "Authorization":`Bearer ${key}`,
+        "Content-Type":"application/json",
+        "HTTP-Referer": "https://nakedquantum.com", 
+        "X-Title": "NakedQuantum"
+      },
+      body:JSON.stringify({
+        model:localStorage.getItem("nq_model")||"deepseek/deepseek-v4-flash",
+        messages:msgs,
+        temperature:char.temperature||1.0
+      })
+    });
+    
     const data=await res.json();
+    if(data.error){
+      console.error("API Error:", data.error);
+      showToast("API Refused: " + (data.error.message || "Strict Format Error"));
+      return null;
+    }
     return data.choices?.[0]?.message?.content||null;
-  }catch(err){console.error(err);showToast("AI call failed");return null;}
+  }catch(err){
+    console.error(err);
+    showToast("AI network failure.");
+    return null;
+  }
 }
-
 
 function appendChatMessage(role,text){
   const c=document.getElementById('chat-messages');const m=document.createElement('div');m.className=`chat-msg ${role==='user'?'user':'char'}`;m.textContent=text;c.appendChild(m);c.scrollTop=c.scrollHeight;
@@ -2120,7 +2186,6 @@ function appendChatMessage(role,text){
 async function clearChatHistory(){if(!activeCharId||!confirm("Clear chat history?"))return;const h=await dbGetByIndex('history','charId',activeCharId);for(const x of h)await dbDelete('history',x.id);document.getElementById('chat-messages').innerHTML='';showToast("History cleared");}
 
 /* VOID */
-
 function closeVoidView(){goBack();}
 async function renderVoidView(){
   const s=document.getElementById('void-surface');s.innerHTML='';
@@ -2141,6 +2206,7 @@ async function renderVoidView(){
   }
   s.appendChild(list);
 }
+
 function openVoidView() { showPanel('view-void'); renderVoidView(); }
 async function handleRestore(id,type){if(type==='discourse')await restoreDiscourse(id);else await restoreCharacter(id);showToast("Restored ✓");await renderVoidView();}
 async function handlePurge(id,type){if(!confirm("Permanently delete?"))return;if(type==='discourse')await purgeDiscourse(id);else await purgeCharacter(id);showToast("Purged");await renderVoidView();}
@@ -2202,7 +2268,7 @@ function openManagementModal(item){
 async function handleMgmtExport() {
   if(!mgmtItem)return;
   if(mgmtItem.type==='folder') await exportFolderContents(mgmtItem.id);
-  else if(mgmtItem.type==='discourse') await exportDiscourseMarkdown(mgmtItem.id);
+  else if(mgmtItem.type==='discourse') await exportDiscourseHTML(mgmtItem.id);
   else showToast("Cannot export character directly");
   resetToDefaultBar();
 }
@@ -2241,7 +2307,6 @@ async function confirmRename(){
   resetToDefaultBar();
   showToast("Renamed");
 }
-
 
 /* MOVE */
 function openMoveModal(){
@@ -2298,9 +2363,13 @@ async function confirmQuickCapture(){
 
 // 1. Initial State
 let modelHistory = JSON.parse(localStorage.getItem('nq_model_history')) || [
-  'anthropic/claude-3.5-sonnet',
-  'openai/gpt-4o',
-  'google/gemini-2.0-flash-001'
+  'deepseek/deepseek-v3.2',
+  'deepseek/deepseek-v4-flash',
+  'google/gemini-2.5-flash-lite',
+  'google/gemini-3.1-flash-lite-preview',
+  'google/gemini-3-flash-preview',
+  'qwen/qwen3-235b-a22b-2507',
+    'openai/gpt-oss-120b'
 ];
 
 function renderModelSelect() {
@@ -2350,6 +2419,8 @@ function removeActiveModel() {
 function openSettingsModal(){
   document.getElementById('input-api-key').value = localStorage.getItem('nq_api_key') || '';
   document.getElementById('input-base-url').value = localStorage.getItem('nq_base_url') || 'https://openrouter.ai/api/v1';
+  document.getElementById('input-supa-url').value = localStorage.getItem('nq_supa_url') || '';
+  document.getElementById('input-supa-key').value = localStorage.getItem('nq_supa_key') || '';
   renderModelSelect();
   document.getElementById('settings-modal').classList.add('visible');
   document.getElementById('cosm-overlay').classList.add('active');
@@ -2400,28 +2471,83 @@ function renderContent(raw){
   t=t.replace(/<p><\/p>/g,'');t=t.replace(/<p>%%[A-Z0-9]+%%<\/p>/g,m=>m.slice(3,-4));return t;
 }
 
-async function exportDocx(){
+async function exportHTML(){
   if(!currentDiscourseId)return;
   await saveCurrentDiscourse(true);
   const d=await getDiscourse(currentDiscourseId);
   if(!d)return;
-  const {Document,Packer,Paragraph,TextRun,HeadingLevel}=docx;
-  const lines=(d.raw_text||'').split('\n');
-  const children=[
-    new Paragraph({heading:HeadingLevel.HEADING_1,children:[new TextRun(d.title||'Untitled')]}),
-    new Paragraph({children:[new TextRun(new Date(d.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}))]}),
-    new Paragraph({children:[new TextRun('')]}),
-    ...lines.map(l=>new Paragraph({children:[new TextRun(l||'')]}))
-  ];
-  const doc=new Document({sections:[{children}]});
-  const blob=await Packer.toBlob(doc);
+  const tile=await getMosaicTile(currentDiscourseId);
+  let mosaicHtml='';
+  if(tile&&tile.anchors&&tile.anchors.length){
+    mosaicHtml=`<div class="mosaic-block"><div class="mosaic-label">◈ MOSAIC</div><ul>${tile.anchors.map(a=>`<li>${escHtml(a)}</li>`).join('')}</ul></div>`;
+  }
+  const content=renderContent(d.raw_text||'');
+  const date=new Date(d.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const html=`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(d.title||'Discourse')}</title>
+<style>
+  :root{--bg:#000;--surface:#0a0a0a;--border:#1f1f1f;--accent:#c8a050;--accent-dim:#8a6e35;--text:#ccc5b9;--muted:#6b6560;}
+  *{box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:Georgia,serif;max-width:720px;margin:0 auto;padding:40px 24px 80px;line-height:1.8;}
+  h1{font-size:26px;font-weight:700;border-bottom:1px solid var(--border);padding-bottom:12px;margin:0 0 8px;color:var(--text);}
+  h2{font-size:20px;margin:24px 0 10px;color:var(--text);}
+  h3{font-size:16px;color:var(--accent);margin:18px 0 8px;}
+  p{margin:0 0 14px;}
+  ul,ol{padding-left:22px;margin:10px 0;}
+  li{margin:4px 0;}
+  blockquote{border-left:3px solid var(--accent-dim);padding:4px 0 4px 16px;color:var(--muted);font-style:italic;margin:14px 0;}
+  pre{background:#0d0d0b;border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:14px 0;}
+  code{font-family:Menlo,monospace;font-size:13px;color:#a0d8a0;}
+  strong{font-weight:700;}
+  em{color:#a09890;font-style:italic;}
+  hr{border:none;border-top:1px solid var(--border);margin:20px 0;}
+  .meta{font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:28px;text-transform:uppercase;}
+  .mosaic-block{border-left:2px solid var(--accent-dim);padding:10px 16px;background:rgba(200,160,80,0.04);border-radius:0 8px 8px 0;margin:20px 0;}
+  .mosaic-label{font-size:9px;letter-spacing:3px;color:var(--accent);font-weight:900;text-transform:uppercase;margin-bottom:8px;}
+  .mosaic-block ul{margin:0;padding-left:16px;}
+  .mosaic-block li{font-size:13px;color:var(--text);margin:4px 0;}
+  .nq-watermark{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:9px;letter-spacing:3px;color:var(--muted);opacity:0.4;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<h1>${escHtml(d.title||'Untitled')}</h1>
+<div class="meta">${escHtml(date)}</div>
+${mosaicHtml}
+${content}
+<div class="nq-watermark">NakedQuantum ◈</div>
+</body>
+</html>`;
+  const blob=new Blob([html],{type:'text/html'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=`${(d.title||'discourse').replace(/[^a-z0-9]/gi,'_').toLowerCase()}.docx`;
-  a.click();URL.revokeObjectURL(url);
-  showToast('Exported as Word ✓');
+  a.href=url;
+  a.download=`${(d.title||'discourse').replace(/[^a-z0-9]/gi,'_').toLowerCase()}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exported as HTML ✓');
 }
 
+async function exportDiscourseHTML(id){
+  const d=await getDiscourse(id);if(!d)return;
+  const tile=await getMosaicTile(id);
+  let mosaicHtml='';
+  if(tile&&tile.anchors&&tile.anchors.length){
+    mosaicHtml=`<div class="mosaic-block"><div class="mosaic-label">◈ MOSAIC</div><ul>${tile.anchors.map(a=>`<li>${escHtml(a)}</li>`).join('')}</ul></div>`;
+  }
+  const content=renderContent(d.raw_text||'');
+  const date=new Date(d.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${escHtml(d.title||'Discourse')}</title><style>:root{--bg:#000;--surface:#0a0a0a;--border:#1f1f1f;--accent:#c8a050;--accent-dim:#8a6e35;--text:#ccc5b9;--muted:#6b6560;}*{box-sizing:border-box;}body{background:var(--bg);color:var(--text);font-family:Georgia,serif;max-width:720px;margin:0 auto;padding:40px 24px 80px;line-height:1.8;}h1{font-size:26px;font-weight:700;border-bottom:1px solid var(--border);padding-bottom:12px;margin:0 0 8px;}h2{font-size:20px;margin:24px 0 10px;}h3{font-size:16px;color:var(--accent);margin:18px 0 8px;}p{margin:0 0 14px;}blockquote{border-left:3px solid var(--accent-dim);padding:4px 0 4px 16px;color:var(--muted);font-style:italic;margin:14px 0;}pre{background:#0d0d0b;border:1px solid var(--border);border-radius:8px;padding:14px;}code{font-family:Menlo,monospace;font-size:13px;color:#a0d8a0;}hr{border:none;border-top:1px solid var(--border);margin:20px 0;}.meta{font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:28px;text-transform:uppercase;}.mosaic-block{border-left:2px solid var(--accent-dim);padding:10px 16px;background:rgba(200,160,80,0.04);border-radius:0 8px 8px 0;margin:20px 0;}.mosaic-label{font-size:9px;letter-spacing:3px;color:var(--accent);font-weight:900;text-transform:uppercase;margin-bottom:8px;}.nq-watermark{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:9px;letter-spacing:3px;color:var(--muted);opacity:0.4;text-transform:uppercase;}</style></head><body><h1>${escHtml(d.title||'Untitled')}</h1><div class="meta">${escHtml(date)}</div>${mosaicHtml}${content}<div class="nq-watermark">NakedQuantum ◈</div></body></html>`;
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`${(d.title||'discourse').replace(/[^a-z0-9]/gi,'_').toLowerCase()}.html`;
+  a.click();URL.revokeObjectURL(url);
+  showToast('Exported ✓');
+}
 
 /* EXPORTS */
 async function exportMarkdown(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported as Markdown");}
@@ -2436,13 +2562,14 @@ async function extractMemory(){
   if(!currentDiscourseId)return;const rawText=document.getElementById("content-textarea").value.trim();if(!rawText||rawText.length<50){showToast("Write more before extracting");return;}
   const key=localStorage.getItem("nexus_v7_key")||localStorage.getItem("nq_api_key")||"";if(!key){showToast("Add OpenRouter key in Settings");return;}
   document.getElementById("extract-loading").classList.add("visible");
-  try{const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("activeModel_v1")||localStorage.getItem("nq_model")||"google/gemini-2.0-flash-001",max_tokens:350,messages:[{role:"system",content:`You are a conceptual anchor extractor. Read the text and return exactly 4-6 anchor phrases. Format: one per line, \"Category: brief anchor phrase\". Categories: Core tension, Open question, Key concept, Hidden assumption, Named force, Recurring image. Reply with ONLY the list.`},{role:"user",content:rawText.slice(0,3000)}]})});
+  try{const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("activeModel_v1")||localStorage.getItem("nq_model")||"deepseek/deepseek-v4-flash",max_tokens:350,messages:[{role:"system",content:`You are a conceptual anchor extractor. Read the text and return exactly 4-6 anchor phrases. Format: one per line, \"Category: brief anchor phrase\". Categories: Core tension, Open question, Key concept, Hidden assumption, Named force, Recurring image. Reply with ONLY the list.`},{role:"user",content:rawText.slice(0,3000)}]})});
   const data=await res.json();const raw=data.choices?.[0]?.message?.content||"";if(!raw.trim()){showToast("Nothing extracted");return;}
   const anchors=raw.split("\n").map(l=>l.trim()).filter(l=>l.length>3&&!l.startsWith("#"));
   await saveMosaicTile(currentDiscourseId,anchors);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic anchored ◈");
   }catch(err){console.error(err);showToast("Extraction failed");}
   finally{document.getElementById("extract-loading").classList.remove("visible");}
 }
+
 async function confirmDeleteMosaic(){if(!currentDiscourseId)return;if(!confirm("Clear mosaic anchors?"))return;await deleteMosaicTile(currentDiscourseId);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic cleared");}
 
 /* AKASHIC */
@@ -2473,10 +2600,108 @@ function cancelLP(card){
   if(card)card.classList.remove('long-pressing');
 }
 
-
 /* TOAST & UTILS */
 function showToast(msg){const t=document.getElementById("cosm-toast");t.textContent=msg;t.style.opacity="1";clearTimeout(t._timer);t._timer=setTimeout(()=>{t.style.opacity="0";},2200);}
 function escHtml(str){if(!str)return"";return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
+/* SUPABASE DELTA SYNC ENGINE */
+async function getCloudCryptoKey() {
+  if (!window.sessionSovereignKey) throw new Error("Key not loaded");
+  return await crypto.subtle.importKey('raw', window.sessionSovereignKey, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+
+async function encForCloud(obj) {
+  const key = await getCloudCryptoKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(JSON.stringify(obj)));
+  return JSON.stringify({iv:Array.from(iv), ct:Array.from(new Uint8Array(ct))});
+}
+
+async function decFromCloud(encStr) {
+  const key = await getCloudCryptoKey();
+  const {iv, ct} = JSON.parse(encStr);
+  const dec = await crypto.subtle.decrypt({name:'AES-GCM', iv: new Uint8Array(iv)}, key, new Uint8Array(ct));
+  return JSON.parse(new TextDecoder().decode(dec));
+}
+
+async function handleSync() {
+  const supaUrl = localStorage.getItem('nq_supa_url');
+  const supaKey = localStorage.getItem('nq_supa_key');
+  if (!supaUrl || !supaKey) { showToast("⚠ Add Supabase keys in Settings"); return; }
+  if (!window.sessionSovereignKey) { showToast("⚠ Unlock Abyss first"); return; }
+
+  showToast("Syncing with the Void...");
+  const syncBtn = document.getElementById('hdr-sync');
+  syncBtn.style.opacity = '0.5';
+
+  try {
+    const lastSync = parseInt(localStorage.getItem('nq_last_sync') || '0');
+    let newLastSync = lastSync;
+    const stores = ['cosm_folders', 'cosm_discourses', 'characters', 'history', 'summaries', 'cosm_mosaic_tiles', 'cosm_backlinks'];
+    
+    // 1. PULL FROM CLOUD
+    const pullRes = await fetch(`${supaUrl}/rest/v1/nq_sync?user_id=eq.${cosmUserId}&updated_at=gt.${lastSync}`, {
+      headers: { 'apikey': supaKey, 'Authorization': `Bearer ${supaKey}` }
+    });
+    if(!pullRes.ok) throw new Error("Failed to connect to Supabase");
+    const remoteRows = await pullRes.json();
+    
+    for (const row of remoteRows) {
+      if (row.updated_at > newLastSync) newLastSync = row.updated_at;
+      if (row.deleted_at) {
+         await dbDelete(row.store, row.id);
+      } else if (row.data_enc) {
+         const obj = await decFromCloud(row.data_enc);
+         await dbPut(row.store, obj);
+      }
+    }
+
+    // 2. PUSH TO CLOUD
+    const pushPayloads = [];
+    for (const store of stores) {
+       const allItems = await dbGetAll(store);
+       const changed = allItems.filter(i => (i.updated_at || i.created_at || 0) > lastSync || (i.deleted_at || 0) > lastSync);
+       
+       for (const item of changed) {
+         const isDel = item.isDeleted || item.is_deleted;
+         const payload = {
+           id: String(item.id),
+           user_id: cosmUserId,
+           store: store,
+           updated_at: isDel ? item.deleted_at : (item.updated_at || item.created_at || Date.now()),
+           deleted_at: isDel ? item.deleted_at : null,
+           data_enc: isDel ? null : await encForCloud(item)
+         };
+         pushPayloads.push(payload);
+       }
+    }
+
+    if (pushPayloads.length > 0) {
+       const pushRes = await fetch(`${supaUrl}/rest/v1/nq_sync`, {
+         method: 'POST',
+         headers: { 
+            'apikey': supaKey, 
+            'Authorization': `Bearer ${supaKey}`, 
+            'Content-Type': 'application/json', 
+            'Prefer': 'resolution=merge-duplicates' 
+         },
+         body: JSON.stringify(pushPayloads)
+       });
+       if(!pushRes.ok) throw new Error("Failed to push to cloud");
+    }
+
+    localStorage.setItem('nq_last_sync', Date.now().toString());
+    showToast("◈ Abyss Synchronized");
+    
+    if(currentMode === 'soup') await renderTableView();
+    else await renderSanctuaryView();
+
+  } catch (e) {
+    console.error("Sync Error:", e);
+    showToast("⚠ Sync Interrupted");
+  } finally {
+    syncBtn.style.opacity = '1';
+  }
+}
 
 /* EVENT BINDING */
 document.addEventListener('DOMContentLoaded',()=> {
@@ -2486,7 +2711,7 @@ initWorker();
   document.getElementById('btn-back-table').addEventListener('click',()=>goBack());
   document.getElementById('btn-write').addEventListener('click',()=>setEditorMode('write'));
   document.getElementById('btn-view').addEventListener('click',()=>setEditorMode('view'));
-document.getElementById('btn-export-docx').addEventListener('click',exportDocx);
+  document.getElementById('btn-export-html').addEventListener('click',exportHTML);
   document.getElementById('btn-export-md').addEventListener('click',exportMarkdown);
   document.getElementById('btn-export-pdf').addEventListener('click',exportPDF);
   document.getElementById('btn-extract').addEventListener('click',extractMemory);
@@ -2527,12 +2752,11 @@ document.getElementById('btn-burn-cancel').addEventListener('click',closeOverlay
 document.getElementById('btn-burn-confirm').addEventListener('click',confirmBurnDisc);
 
 document.getElementById('btn-settings-confirm').addEventListener('click', () => {
-  const k = document.getElementById('input-api-key').value.trim();
-  const u = document.getElementById('input-base-url').value.trim();
-  const m = document.getElementById('input-model').value; 
-  localStorage.setItem('nq_api_key', k);
-  localStorage.setItem('nq_base_url', u);
-  localStorage.setItem('nq_model', m);
+  localStorage.setItem('nq_api_key', document.getElementById('input-api-key').value.trim());
+  localStorage.setItem('nq_base_url', document.getElementById('input-base-url').value.trim());
+  localStorage.setItem('nq_model', document.getElementById('input-model').value); 
+  localStorage.setItem('nq_supa_url', document.getElementById('input-supa-url').value.trim());
+  localStorage.setItem('nq_supa_key', document.getElementById('input-supa-key').value.trim());
 
   closeOverlay();
   showToast("Gateway Solidified");
@@ -2563,7 +2787,13 @@ document.getElementById('btn-add-manual-memory').addEventListener('click',addMan
   document.getElementById('btn-chat-edit').addEventListener('click',()=>openCharacterForge(activeCharId));
   document.getElementById('btn-chat-clear').addEventListener('click',clearChatHistory);
   document.getElementById('btn-send').addEventListener('click',handleChatSend);
-  document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleChatSend();}});
+  document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.stopPropagation(); // newline only
+    return;
+  }
+  // remove the Shift+Enter send entirely if you want button-only
+});
   document.getElementById('chat-input').addEventListener('input',function(){this.style.height='auto';this.style.height=(this.scrollHeight)+'px';});
 
   const fmtMap={'fmt-bold':{wrap:['**','**']},'fmt-italic':{wrap:['*','*']},'fmt-underline':{wrap:['<u>','</u>']},'fmt-quote':{line:'> '},'fmt-code':{wrap:['`','`']},'fmt-codeblock':{block:'```\n',end:'\n```'},'fmt-divider-line':{insert:'\n---\n'},'fmt-bullet':{line:'- '},'fmt-numbered':{line:'1. '},'fmt-h1':{line:'# '},'fmt-h2':{line:'## '},'fmt-h3':{line:'### '}};
