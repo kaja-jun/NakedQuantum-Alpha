@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.22.7</title>
+<title>NakedQuantum v0.25.2</title>
 <style>
 :root {
   --bg: #000000;
@@ -120,6 +120,106 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
 .discourse-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 10px; color: var(--muted); letter-spacing: 1px; }
 .meta-separator { opacity: 0.3; }
 .source-link { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); font-size: 10px; padding: 3px 8px; border: 1px solid var(--accent-dim); border-radius: 6px; background: rgba(200,160,80,0.06); text-decoration: none; }
+
+/* THE GOLD LINE */
+#gold-line-zone {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 30px;
+  z-index: 500; opacity: 0; pointer-events: none;
+  transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#gold-line-zone.awake {
+  opacity: 1; pointer-events: auto;
+}
+.gold-thread {
+  position: absolute; top: 20px; bottom: 100px; left: 7px; width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--accent), var(--accent-dim), transparent);
+  box-shadow: 0 0 10px rgba(200, 160, 80, 0.2);
+  transform-origin: top;
+}
+.gold-thread.wobble {
+  animation: threadWobble 0.6s ease-out;
+}
+.gold-tick {
+  position: absolute; left: 4px; width: 7px; height: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 5px var(--accent);
+  transition: top 0.4s ease;
+}
+.gold-tick.current { width: 11px; left: 2px; height: 2px; }
+
+@keyframes threadWobble {
+  0% { transform: scaleX(1) translateX(0); }
+  25% { transform: scaleX(1.5) translateX(2px); }
+  50% { transform: scaleX(0.8) translateX(-1px); }
+  75% { transform: scaleX(1.1) translateX(0.5px); }
+  100% { transform: scaleX(1) translateX(0); }
+}
+/* Optional: Hide the old breadcrumb bar to fully embrace the descent */
+/* .breadcrumb-bar { display: none !important; } */
+
+/* DECAY SYSTEM */
+.card-fading {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+.card-fading .discourse-card-title,
+.card-fading .folder-card-name,
+.card-fading .char-card-name { color: var(--muted) !important; }
+
+.decay-mote {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: moteDrift 12s ease-in-out infinite;
+}
+.decay-mote.heavy {
+  width: 5px; height: 5px;
+  background: var(--accent-dim);
+}
+@keyframes moteDrift {
+  0%   { opacity: 0; transform: translate(0px, 0px); }
+  15%  { opacity: 0.18; }
+  50%  { opacity: 0.12; transform: translate(var(--mx), var(--my)); }
+  85%  { opacity: 0.18; }
+  100% { opacity: 0; transform: translate(0px, 0px); }
+}
+
+/* DEEP SOUP VIEW */
+.deep-soup-view { background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.deep-soup-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; flex-shrink: 0; }
+.deep-soup-title { font-size: 9px; letter-spacing: 3px; color: var(--accent-dim); opacity: 0.7; font-weight: 900; text-transform: uppercase; }
+
+
+/* THE LINEAGE NAVIGATOR */
+#lineage-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1500; display: none; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+#lineage-overlay.active { display: block; }
+
+.lineage-panel { position: fixed; top: 0; bottom: 0; left: 0; width: 85vw; max-width: 320px; background: rgba(10,10,10,0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-right: 1px solid var(--border); z-index: 1600; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+.lineage-panel.open { transform: translateX(0); }
+
+.lineage-header { padding: 20px 16px; font-size: 10px; letter-spacing: 3px; color: var(--accent); font-weight: 900; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+.lineage-content { flex: 1; overflow-y: auto; padding: 24px 0 100px 0; }
+
+.lineage-level { position: relative; padding: 0 0 24px 24px; }
+.lineage-level::before { content: ''; position: absolute; left: 26px; top: 22px; bottom: -10px; width: 1px; background: var(--border); }
+.lineage-level:last-child::before { display: none; }
+
+.lineage-level-dot { position: absolute; left: 24px; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); z-index: 2; transition: background 0.3s; }
+.lineage-level.current .lineage-level-dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); width: 7px; height: 7px; left: 23px; top: 5px; }
+
+.lineage-level-name { font-size: 14px; font-weight: 700; color: var(--text); padding-left: 20px; margin-bottom: 10px; cursor: pointer; display: inline-block; transition: color 0.2s; }
+.lineage-level-name:active { opacity: 0.6; }
+.lineage-level.current .lineage-level-name { color: var(--accent); }
+
+/* The Sideways Glances (Siblings) */
+.lineage-siblings { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 8px 44px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.lineage-siblings::-webkit-scrollbar { display: none; }
+.lineage-sibling-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: 11px; padding: 6px 12px; border-radius: 8px; white-space: nowrap; font-weight: 700; }
+.lineage-sibling-btn:active { background: var(--surface3); border-color: var(--accent-dim); color: var(--text); }
 
 .mosaic-block { border-left: 2px solid var(--accent-dim); padding: 10px 14px; background: rgba(200,160,80,0.04); border-radius: 0 8px 8px 0; }
 .mosaic-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -398,7 +498,6 @@ select.cosm-input {
 <div id="lock-screen" style="position:fixed;inset:0;background:#000;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
   <div style="color:#a0d8a0;letter-spacing:5px;font-size:11px;font-weight:900;text-transform:uppercase;">NakedQuantum</div>
   <button id="btn-manual-unlock" style="background:var(--surface2);border:1px solid var(--accent-dim);color:var(--accent);padding:12px 24px;border-radius:20px;font-weight:900;font-size:11px;letter-spacing:1px;text-transform:uppercase;display:none;">Tap to Unlock</button>
-  
   <input type="password" id="fallback-key-input" placeholder="Paste Sovereign Key..." class="cosm-input" style="display:none; width:250px; text-align:center;">
   <button id="btn-fallback-unlock" style="display:none; background:var(--accent); color:#000; font-weight:900; padding:12px 24px; border-radius:20px; border:none; text-transform:uppercase; font-size:11px; letter-spacing:1px;">Force Unlock</button>
 </div>
@@ -411,6 +510,14 @@ select.cosm-input {
 
 <div class="view-host">
   <div class="view-panel soup-view" id="view-soup">
+    
+    <!-- THE GOLD LINE -->
+    <div id="gold-line-zone">
+      <div class="gold-thread" id="gold-thread"></div>
+      <div id="gold-ticks-container"></div>
+    </div>
+    <div id="gold-line-trigger" style="position:absolute;top:0;bottom:0;left:0;width:20px;z-index:501;"></div>
+
     <div class="breadcrumb-bar" id="breadcrumb-bar"></div>
     <div class="search-bar-wrap" id="search-bar-wrap" style="display:none;">
       <input class="search-input" id="search-input" placeholder="Search discourses...">
@@ -420,14 +527,19 @@ select.cosm-input {
 
   <div class="view-panel void-view hidden" id="view-void">
     <div class="void-header">
-      <div class="void-title">◌ Void — Deleted Items</div>
+      <div class="void-title">◌ Void -- Deleted Items</div>
       <button class="btn-void-purge-all" id="btn-purge-all">Purge All</button>
     </div>
     <div style="padding:0 16px;">
-      <button class="btn-table-action" id="btn-close-void" style="margin-bottom:12px;flex:none;width:100%;">← Back to Soup</button>
+     <div style="padding:4px 16px 0;">
     </div>
     <div class="table-surface" id="void-surface" style="padding-top:0;"></div>
   </div>
+  </div>
+<div class="view-panel deep-soup-view hidden" id="view-deep-soup">
+  <div class="breadcrumb-bar" id="deep-soup-breadcrumb"></div>
+  <div class="table-surface" id="deep-soup-surface" style="padding-top:0;"></div>
+</div>
 
   <div class="view-panel lighthouse-view hidden" id="view-lighthouse">
     <div class="lighthouse-nav">
@@ -465,14 +577,14 @@ select.cosm-input {
           <button class="fmt-btn" id="fmt-h2">H2</button>
           <button class="fmt-btn" id="fmt-h3">H3</button>
           <div class="fmt-divider"></div>
-          <button class="fmt-btn" id="fmt-bullet">• —</button>
+          <button class="fmt-btn" id="fmt-bullet">• --</button>
           <button class="fmt-btn" id="fmt-numbered">1.</button>
           <div class="fmt-divider"></div>
           <button class="fmt-btn" id="fmt-quote">"</button>
           <button class="fmt-btn code-btn" id="fmt-code">`c`</button>
           <button class="fmt-btn code-btn" id="fmt-codeblock">```</button>
           <div class="fmt-divider"></div>
-          <button class="fmt-btn" id="fmt-divider-line">—</button>
+          <button class="fmt-btn" id="fmt-divider-line">--</button>
         </div>
 
         <div class="content-view" id="content-view"></div>
@@ -588,7 +700,6 @@ select.cosm-input {
 
  <div class="view-panel chat-view hidden" id="view-chat">
   <div class="chat-header">
-    <button class="btn-back-table" id="btn-chat-back">← Sanctuary</button>
     <div class="chat-char-info">
       <div class="chat-char-name" id="chat-char-name">Character Name</div>
     </div>
@@ -608,7 +719,7 @@ select.cosm-input {
 <div class="view-panel hidden" id="view-memory" style="background:var(--bg);display:flex;flex-direction:column;">
   <div class="lighthouse-nav">
     <button class="btn-back-table" id="btn-memory-back">← Chat</button>
-    <div style="font-size:10px;letter-spacing:2px;color:var(--accent);font-weight:900;">◈ MEMORY VAULT</div>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--accent);font-weight:900;">▣ MEMORY VAULT</div>
     <button class="tbtn gold" id="btn-add-manual-memory">+ Anchor</button>
   </div>
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px 100px;">
@@ -618,8 +729,7 @@ select.cosm-input {
 
 <div class="view-panel hidden" id="view-persona" style="background:var(--bg);display:flex;flex-direction:column;">
   <div class="lighthouse-nav">
-    <button class="btn-back-table" id="btn-persona-back">← Sanctuary</button>
-    <div style="font-size:10px;letter-spacing:2px;color:var(--accent);font-weight:900;">◈ PERSONA</div>
+    <div style="font-size:10px;letter-spacing:2px;color:var(--accent);font-weight:900;">⁂ PERSONA</div>
     <button class="tbtn gold" id="btn-save-persona">Save</button>
   </div>
   <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px 100px;">
@@ -645,6 +755,22 @@ select.cosm-input {
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-folder-cancel">Cancel</button>
     <button class="modal-btn-confirm" id="btn-folder-confirm">Create</button>
+  </div>
+</div>
+
+<div class="cosm-modal" id="data-modal">
+  <div class="modal-title">⩔ Data</div>
+  <div class="management-actions">
+    <button class="management-btn export" id="btn-data-export">
+      <span>⩔</span> Export Backup
+    </button>
+    <label class="management-btn export" style="cursor:pointer;">
+      <span>⩓</span> Import Backup
+      <input type="file" accept=".json" id="import-json-input" style="display:none;">
+    </label>
+  </div>
+  <div class="modal-buttons">
+    <button class="modal-btn-cancel" id="btn-data-cancel">Cancel</button>
   </div>
 </div>
 
@@ -676,14 +802,25 @@ select.cosm-input {
 </div>
 
 <div class="cosm-modal" id="capture-modal">
-  <div class="modal-title">Quick Capture</div>
+  <div class="modal-title">Quick Spark</div>
   <input class="cosm-input" id="capture-title" placeholder="Title..." maxlength="120">
   <textarea class="cosm-input" id="capture-body" placeholder="Thought, aphorism, idea..." style="min-height:120px;resize:none;font-family:Georgia,serif;line-height:1.7;font-size:15px;"></textarea>
   <select class="cosm-select" id="capture-folder"></select>
   <input class="cosm-input" id="capture-new-folder-input" placeholder="New folder name..." maxlength="60" style="display:none;">
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-capture-cancel">Cancel</button>
-    <button class="modal-btn-confirm" id="btn-capture-confirm">Capture ✦</button>
+    <button class="modal-btn-confirm" id="btn-capture-confirm">Spark</button>
+  </div>
+</div>
+
+<div class="cosm-modal" id="discourse-modal">
+  <div class="modal-title">◈ New Discourse</div>
+  <input class="cosm-input" id="discourse-modal-title" placeholder="Title..." maxlength="120">
+  <select class="cosm-select" id="discourse-modal-folder"></select>
+  <input class="cosm-input" id="discourse-modal-new-folder" placeholder="New folder name..." maxlength="60" style="display:none;">
+  <div class="modal-buttons">
+    <button class="modal-btn-cancel" id="btn-discourse-modal-cancel">Cancel</button>
+    <button class="modal-btn-confirm" id="btn-discourse-modal-confirm">Enter Lighthouse</button>
   </div>
 </div>
 
@@ -735,19 +872,19 @@ select.cosm-input {
   </div>
 </div>
 <div class="cosm-modal" id="burn-disc-modal">
-  <div class="modal-title">🔥 Burn Disc</div>
+  <div class="modal-title">⌬ Engram</div>
   <div style="font-size:11px;color:var(--muted);">Character</div>
   <select class="cosm-select" id="burn-char-select"></select>
   <div style="font-size:11px;color:var(--muted);">Drop into folder</div>
   <select class="cosm-select" id="burn-folder-select"></select>
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-burn-cancel">Cancel</button>
-    <button class="modal-btn-confirm" id="btn-burn-confirm">Burn 🔥</button>
+    <button class="modal-btn-confirm" id="btn-burn-confirm">Engram</button>
   </div>
 </div>
 
 <div class="cosm-modal" id="persona-select-modal">
-  <div class="modal-title">◈ Your Role Here</div>
+  <div class="modal-title">⁂ Your Role Here</div>
   <div class="management-actions" id="persona-select-list"></div>
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-persona-select-cancel">Cancel</button>
@@ -756,13 +893,23 @@ select.cosm-input {
 
 
 <div class="cosm-modal" id="role-modal">
-  <div class="modal-title">◈ New Role</div>
+  <div class="modal-title">⁂ New Role</div>
   <input class="cosm-input" id="role-name-input" placeholder="Role name (e.g. Philosopher, Young Kaja)..." maxlength="60">
   <textarea class="cosm-input" id="role-desc-input" placeholder="Describe this role..." style="min-height:100px;resize:none;font-family:Georgia,serif;line-height:1.7;font-size:15px;"></textarea>
   <div class="modal-buttons">
     <button class="modal-btn-cancel" id="btn-role-cancel">Cancel</button>
     <button class="modal-btn-confirm" id="btn-role-confirm">Anchor ✦</button>
   </div>
+</div>
+
+<!-- LINEAGE NAVIGATOR -->
+<div id="lineage-overlay"></div>
+<div id="lineage-panel" class="lineage-panel">
+  <div class="lineage-header">
+    <span>◈ LINEAGE</span>
+    <button class="btn-delete-mosaic" onclick="closeLineage()">✕</button>
+  </div>
+  <div id="lineage-content" class="lineage-content"></div>
 </div>
 
 <div id="cosm-toast"></div>
@@ -774,7 +921,7 @@ document.addEventListener('touchstart',()=>{},{passive:true});
 
 let db=null,currentMode='soup',currentDiscourseId=null,currentFolderId=null,
     breadcrumbPath=[{id:null,name:'◈  The soup'}],editorMode='write',currentView='table',
-    mgmtItem=null,mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
+    mosaicCache={},searchQuery='',activeCharId=null,sanctuarySearchQuery='';
 const AKASHIC_URL='https://wandering-violet-964a.gazajar.workers.dev';
 
 let cosmUserId=localStorage.getItem('cosm_user_id')||crypto.randomUUID();
@@ -783,6 +930,9 @@ let longPressTimer=null,isLongPress=false,longPressConsumed=false,touchStartPos=
 const LONG_PRESS_DURATION=1000,MOVE_THRESHOLD=10;
 
 let selectMode=false, selectedItems=new Set();
+
+let deepSoupFolderId = null;
+let deepSoupPath = [{id: null, name: '꩜ Deep Soup'}];
 
 
 /* PERSONA */
@@ -804,7 +954,7 @@ function savePersonaRoles(roles){
 class FF{constructor(){this.canvas=document.getElementById('firefly-canvas');this.ctx=this.canvas.getContext('2d');this.p=[];this.d=15;this.r();window.addEventListener('resize',()=>this.r());this.a();}r(){this.canvas.width=innerWidth;this.canvas.height=innerHeight;}sd(l){this.d=Math.min(60,15+Math.floor(l/200));}a(){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);while(this.p.length<this.d)this.p.push({x:Math.random()*this.canvas.width,y:Math.random()*this.canvas.height,s:Math.random()*1.5+.2,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,a:Math.random()*.4+.1,p:Math.random()*.01+.002});if(this.p.length>this.d)this.p.splice(this.d);this.p.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.p;if(p.a>.6||p.a<.1)p.p*=-1;if(p.x<0)p.x=this.canvas.width;if(p.x>this.canvas.width)p.x=0;if(p.y<0)p.y=this.canvas.height;if(p.y>this.canvas.height)p.y=0;this.ctx.beginPath();this.ctx.arc(p.x,p.y,p.s,0,Math.PI*2);this.ctx.fillStyle=`rgba(200,160,80,${p.a})`;this.ctx.fill();});requestAnimationFrame(()=>this.a());}}
 const firefly=new FF();
 
-/* DB — ABYSS-PROOF WORKER (NULL FIXED)- Nuclear fix 
+/* DB -- ABYSS-PROOF WORKER (NULL FIXED)- Nuclear fix 
 Auto increment Time-bomb & PUT code endless echo */
 const WORKER_CODE = `
 importScripts('https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js');
@@ -817,7 +967,6 @@ async function initSql() {
   const SQL = await initSqlJs({ locateFile: f => 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/' + f });
   const existing = await loadFromOPFS();
   db = existing ? new SQL.Database(existing) : new SQL.Database();
-  
   // THE PURGE: We must destroy the old integer-based tables to rebuild them as TEXT
   // ONE-TIME MIGRATION: only drop if still old INTEGER schema
 try {
@@ -834,13 +983,11 @@ try {
   db.run("CREATE TABLE IF NOT EXISTS cosm_folders(id TEXT PRIMARY KEY, name TEXT, parent_id TEXT, created_at INTEGER, updated_at INTEGER, is_deleted INTEGER DEFAULT 0)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_discourses(id TEXT PRIMARY KEY, title TEXT, raw_text TEXT, folder_id TEXT, source_link TEXT, item_type TEXT, tags TEXT, is_deleted INTEGER DEFAULT 0, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS characters(id TEXT PRIMARY KEY, name TEXT, role TEXT, backstory TEXT, personality TEXT, lorebook TEXT, scenario TEXT, inclination TEXT, relationships TEXT, pc_info TEXT, player_role_id TEXT, image TEXT, temperature REAL DEFAULT 1, is_deleted INTEGER DEFAULT 0, deleted_at INTEGER, created_at INTEGER, updated_at INTEGER)");
-  
   // THE FIX: History and Summaries now use TEXT IDs (UUID/Timestamps)
   db.run("CREATE TABLE IF NOT EXISTS history(id TEXT PRIMARY KEY, charId TEXT, role TEXT, content TEXT, created_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS summaries(id TEXT PRIMARY KEY, charId TEXT, text TEXT, type TEXT, created_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_mosaic_tiles(id TEXT PRIMARY KEY, discourse_id TEXT, anchors TEXT, created_at INTEGER)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_backlinks(id TEXT PRIMARY KEY, discourse_id TEXT, char_name TEXT, created_at INTEGER)");
-  
   db.run("CREATE TABLE IF NOT EXISTS cosm_folders_enc(id TEXT PRIMARY KEY, enc TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS cosm_discourses_enc(id TEXT PRIMARY KEY, enc TEXT)");
   db.run("CREATE TABLE IF NOT EXISTS characters_enc(id TEXT PRIMARY KEY, enc TEXT)");
@@ -855,7 +1002,6 @@ try {
       tableColumns[t] = info[0].values.map(v => v[1]);
     } catch(e) {}
   });
-
   db.run("DELETE FROM cosm_folders WHERE id='root'");
   await save();
 }
@@ -1028,7 +1174,6 @@ function initWorker(){
   });
 }
 
-
 /* DB HELPERS */
 const dbPut = (s, d) => _workerReady.then(() => new Promise((res, rej) => {
   const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
@@ -1055,11 +1200,47 @@ const setEncryptionKey = (keyBytes) => _workerReady.then(() => new Promise((res,
   _worker.postMessage({ id: msgId, action: 'SET_KEY', data: { keyBytes: Array.from(keyBytes) } });
 }));
 
-
 /* FOLDERS */
 const getFolders=()=>dbGetAll("cosm_folders");
 async function createFolder(name,parent_id=null){const id="f_"+Date.now();await dbPut("cosm_folders",{id,name,parent_id,created_at:Date.now()});return id;}
-async function deleteFolder(id){await dbDelete("cosm_folders",id);const ds=await dbGetByIndex("cosm_discourses","folder_id",id);for(const d of ds){d.folder_id=null;await dbPut("cosm_discourses",d);}const cf=(await dbGetAll("cosm_folders")).filter(f=>f.parent_id===id);for(const cf2 of cf)await deleteFolder(cf2.id);}
+
+async function countFolderContents(id){
+  let discourses=0,sparks=0,folders=0;
+  const ds=await dbGetByIndex("cosm_discourses","folder_id",id);
+  discourses+=ds.filter(d=>!d.isDeleted&&d.item_type!=='note').length;
+  sparks+=ds.filter(d=>!d.isDeleted&&d.item_type==='note').length;
+  const cf=(await dbGetAll("cosm_folders")).filter(f=>f.parent_id===id&&!f.isDeleted);
+  folders+=cf.length;
+  for(const child of cf){
+    const childCount=await countFolderContents(child.id);
+    discourses+=childCount.discourses;
+    sparks+=childCount.sparks;
+    folders+=childCount.folders;
+  }
+  return{discourses,sparks,folders};
+}
+
+async function deleteFolderRecursive(id){
+  const ds=await dbGetByIndex("cosm_discourses","folder_id",id);
+  for(const d of ds)if(!d.isDeleted)await deleteDiscourse(d.id);
+  const cf=(await dbGetAll("cosm_folders")).filter(f=>f.parent_id===id);
+  for(const child of cf)await deleteFolderRecursive(child.id);
+  await dbDelete("cosm_folders",id);
+}
+
+async function deleteFolder(id){
+  const counts=await countFolderContents(id);
+  const folder=await dbGet("cosm_folders",id);
+  const name=folder?.name||'this folder';
+  const parts=[];
+  if(counts.folders>0)parts.push(`${counts.folders} folder${counts.folders>1?'s':''}`);
+  if(counts.discourses>0)parts.push(`${counts.discourses} discourse${counts.discourses>1?'s':''}`);
+  if(counts.sparks>0)parts.push(`${counts.sparks} spark${counts.sparks>1?'s':''}`);
+  const summary=parts.length?` and ${parts.join(', ')} inside`:'';
+  if(!confirm(`Burn "${name}"${summary} to the Void?`))return false;
+  await deleteFolderRecursive(id);
+  return true;
+}
 
 /* DISCOURSES */
 async function getDiscourses(){const a=await dbGetAll("cosm_discourses");return a.filter(d=>!d.isDeleted).sort((a,b)=>b.updated_at-a.updated_at);}
@@ -1130,7 +1311,7 @@ async function unlockWithPRF(){
       const keyBytes = new Uint8Array(ext.prf.results.first);
       window.sessionSovereignKey = keyBytes; // Capture in RAM for backup
       await setEncryptionKey(keyBytes);
-      showToast('◈ Sovereign key active');
+      showToast('Sovereign key active ◆');
       return true;
     }
   } catch(e) {
@@ -1148,7 +1329,7 @@ async function unlockWithPRF(){
           }
         });
         localStorage.setItem(WA_CRED_KEY, bufToB64(cred.rawId));
-        showToast('◈ Face ID registered — unlock now');
+        showToast('◈ Face ID registered -- unlock now');
         return await unlockWithPRF();
       } catch(regErr) {
         console.error('PRF register failed:', regErr);
@@ -1162,7 +1343,7 @@ async function unlockWithPRF(){
 window.sessionSovereignKey = null;
 
 function showSovereignKey() {
-  if(!window.sessionSovereignKey) { showToast("Unlock Abyss first"); return; }
+  if(!window.sessionSovereignKey) { showToast("Unlock Abyss first ◆"); return; }
   const b64 = bufToB64(window.sessionSovereignKey);
   const displayInput = document.getElementById('export-key-display');
   displayInput.value = b64;
@@ -1202,7 +1383,7 @@ async function unlockWithFallbackKey() {
     await setEncryptionKey(keyBytes);
     
     document.getElementById('lock-screen').style.display = 'none';
-    showToast("◈ Abyss Unlocked"); // This toast is fine because the keyboard drops when app loads
+    showToast("Abyss Unlocked ◆"); // This toast is fine because the keyboard drops when app loads
     await init();
   } catch(e) {
     showError("⚠ INVALID KEY");
@@ -1216,7 +1397,7 @@ async function init(){
   // Ask iOS nicely to not erase us
   if(navigator.storage&&navigator.storage.persist){
     navigator.storage.persist().then(granted=>{
-      if(granted)console.log('◈ Storage persistence granted');
+      if(granted)console.log('◆ Storage persistence granted');
     });
   }
   
@@ -1233,9 +1414,7 @@ async function init(){
   document.getElementById('input-model').value=localStorage.getItem('nq_model')||'deepseek/deepseek-v4-flash';
 }
 
-
 /*Naked Handle*/
-
 async function handleSend() {
   const input = document.getElementById('userInput');
   const text = input.value.trim();
@@ -1247,7 +1426,7 @@ async function handleSend() {
   const strikeUrl = `${baseUrl}/chat/completions`;
 
   if (!apiKey) {
-    showToast("Neural Link Failure: No API Key");
+    showToast("Neural Link Failure: No API Key ◆");
     return;
   }
 
@@ -1290,9 +1469,9 @@ async function handleSend() {
 async function openBurnDiscModal(){
   const chars=await getCharacters();
   const active=chars.filter(c=>!c.isDeleted);
-  if(!active.length){showToast("No characters in Sanctuary");return;}
+  if(!active.length){showToast("No characters in Sanctuary ◆");return;}
   const charSel=document.getElementById('burn-char-select');
-  charSel.innerHTML='<option value="">— Choose character —</option>';
+  charSel.innerHTML='<option value="">-- Choose character --</option>';
   active.forEach(c=>{
     const o=document.createElement('option');
     o.value=c.id;o.textContent=c.name;
@@ -1301,7 +1480,7 @@ async function openBurnDiscModal(){
   });
   const folders=await getFolders();
   const folderSel=document.getElementById('burn-folder-select');
-  folderSel.innerHTML='<option value="">◈ Use character name as folder</option>';
+  folderSel.innerHTML='<option value="">Use character name as folder ◆</option>';
   folders.forEach(f=>{
     const o=document.createElement('option');
     o.value=f.id;o.textContent=f.name;
@@ -1313,14 +1492,14 @@ async function openBurnDiscModal(){
 
 async function confirmBurnDisc(){
   const charId=document.getElementById('burn-char-select').value;
-  if(!charId){showToast("Choose a character first");return;}
+  if(!charId){showToast("Choose a character first ◆");return;}
   const char=await getCharacter(charId);
   const history=await dbGetByIndex('history','charId',charId);
-  if(!history.length){showToast("No chapters to burn");return;}
+  if(!history.length){showToast("No chapters to Engram ◆");return;}
   const lastBurn=parseInt(localStorage.getItem('lastBurn_'+charId)||'0');
   const newMessages=history.filter(h=>(h.created_at||0)>lastBurn);
   if(!newMessages.length){
-    showToast("No new chapters since last burn ◈");
+    showToast("No new chapters since last burn ◆");
     closeOverlay();return;
   }
   const raw_text=newMessages.map(h=>
@@ -1332,11 +1511,25 @@ async function confirmBurnDisc(){
     folderId=existing?existing.id:await createFolder(char.name,null);
   }
   const date=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-  const title=`${char.name} — ${date}`;
+  const title=`${char.name} -- ${date}`;
+  
+  // 1. Await the creation
   await createDiscourse({title,raw_text,folder_id:folderId});
+  
+  // 2. Update the burn marker
   localStorage.setItem('lastBurn_'+charId,Date.now().toString());
+  
+  // 3. Close the modal
   closeOverlay();
-  showToast(`🔥 Burned — ${newMessages.length} chapters`);
+  
+  // 4. THE FIX: Force the active view to re-render immediately
+  if (currentMode === 'soup') {
+      await renderTableView();
+  } else if (currentMode === 'sanctuary') {
+      await renderSanctuaryView();
+  }
+  
+  showToast(`⌬ Engramed -- ${newMessages.length} chapters`);
 }
 
 /* PERSONA FUNCTIONS */
@@ -1374,7 +1567,7 @@ function deleteRole(id){
   const roles=getPersonaRoles().filter(r=>r.id!==id);
   savePersonaRoles(roles);
   renderRoles();
-  showToast('Role removed');
+  showToast('Role removed ◆');
 }
 
 function addNewRole(){
@@ -1387,21 +1580,20 @@ function addNewRole(){
 function confirmAddRole(){
   const name=document.getElementById('role-name-input').value.trim();
   const description=document.getElementById('role-desc-input').value.trim();
-  if(!name||!description){showToast('Fill both fields');return;}
+  if(!name||!description){showToast('Fill both fields ◆');return;}
   const roles=getPersonaRoles();
   roles.push({id:'r_'+Date.now(),name,description});
   savePersonaRoles(roles);
   renderRoles();
   closeOverlay();
-  showToast('Role anchored ✦');
+  showToast('Role anchored ◆');
 }
-
 
 function savePersonaPage(){
   const bio=document.getElementById('persona-bio').value.trim();
   const personality=document.getElementById('persona-personality').value.trim();
   saveGlobalPersona(bio,personality);
-  showToast('Persona solidified ◈');
+  showToast('Persona solidified ◆');
 }
 
 /* BOTTOM BAR */
@@ -1427,16 +1619,16 @@ function renderDefaultBar(mode) {
     // 4 PILLS: THE ARCHIVE QUAD
     showBottomBar([
       { icon: '▤', label: 'Folder', action: () => openFolderModal() },
-      { icon: '✦', label: 'Discourse', action: () => handleNewDiscourse() },
-      { icon: '⚡', label: 'Capture', action: () => openQuickCapture() },
-      { icon: '🔥', label: 'Burn Disc', action: () => openBurnDiscModal() }
+      { icon: '☆', label: 'Discourse', action: () => handleNewDiscourse() },
+      { icon: '⌇', label: 'Spark', action: () => openQuickCapture() },
+      { icon: '⌬', label: 'Engram', action: () => openBurnDiscModal() }
     ]);
   } else {
     // 4 PILLS: THE ENTITY QUAD
     showBottomBar([
       { icon: '+', label: 'Character', action: () => handleNewCharacter() },
       { icon: '⚿', label: 'Forge', action: () => openCharacterForge() },
-      { icon: '◈', label: 'Persona', action: () => openPersonaView() },
+      { icon: '⁂', label: 'Persona', action: () => openPersonaView() },
       { icon: '⏀', label: 'Settings', action: () => openSettingsModal() }
     ]);
   }
@@ -1444,37 +1636,106 @@ function renderDefaultBar(mode) {
 
 function enterSelectMode(item){
   selectMode=true;
-  selectedItems=new Set();
-  selectedItems.add(item.id);
-  if(currentMode==='soup') renderTableView().then(()=>renderSelectBar());
+  if(!selectedItems) selectedItems=new Set();
+  if(item&&item.id) selectedItems.add(item.id);
+  if(currentMode=='soup') renderTableView().then(()=>renderSelectBar());
   else renderSanctuaryView().then(()=>renderSelectBar());
 }
 
 function renderSelectBar(){
   const count=selectedItems.size;
   const hasFolder=[...selectedItems].some(id=>id.startsWith('f_'));
-  if(currentMode==='sanctuary'){
-    showBottomBar([
-      {icon:`${count}`,label:'Selected',action:()=>{}},
-      {icon:'✕',label:'Delete',action:()=>batchDelete(),style:'danger'},
-      {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
-    ]);
-  } else if(hasFolder){
-    showBottomBar([
-      {icon:`${count}`,label:'Selected',action:()=>{}},
-      {icon:'▤',label:'Move',action:()=>batchMove()},
-      {icon:'✕',label:'Delete',action:()=>batchDelete(),style:'danger'},
-      {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
-    ]);
-  } else {
-    showBottomBar([
-      {icon:`${count}`,label:'Selected',action:()=>{}},
-      {icon:'▤',label:'Move',action:()=>batchMove()},
-      {icon:'🔥',label:'Burn',action:()=>batchBurn()},
-      {icon:'✕',label:'Delete',action:()=>batchDelete(),style:'danger'},
-      {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
-    ]);
+  
+  if(count===0){
+    exitSelectMode();
+    return;
   }
+
+  if(currentMode==='sanctuary'){
+    if(count===1){
+      const id=[...selectedItems][0];
+      showBottomBar([
+        {icon:'✎',label:'Rename',action:()=>{exitSelectMode();openRenameForChar(id);}},
+        {icon:'✕',label:'Burn',action:()=>batchDelete(),style:'danger'},
+        {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
+      ]);
+    } else {
+      showBottomBar([
+        {icon:`${count}`,label:'Selected',action:()=>{}},
+        {icon:'✕',label:'Burn',action:()=>batchDelete(),style:'danger'},
+        {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
+      ]);
+    }
+    return;
+  }
+
+  if(count===1 && !hasFolder){
+    const id=[...selectedItems][0];
+    const isDiscourse=id.startsWith('d_')||id.startsWith('n_');
+    const pills=[
+      {icon:'✎',label:'Rename',action:()=>{exitSelectMode();openRenameForItem(id);}},
+      {icon:'▤',label:'Move',action:()=>batchMove()},
+    ];
+    if(isDiscourse){
+      pills.push({icon:'↓',label:'Export',action:()=>{exitSelectMode();exportDiscourseHTML(id);}});
+    }
+    pills.push({icon:'✕',label:'Burn',action:()=>batchDelete(),style:'danger'});
+    pills.push({icon:'✗',label:'Cancel',action:()=>exitSelectMode()});
+    showBottomBar(pills);
+  } else {
+    const pills=[
+      {icon:`${count}`,label:'Selected',action:()=>{}},
+      {icon:'▤',label:'Move',action:()=>batchMove()},
+      {icon:'✕',label:'Burn',action:()=>batchDelete(),style:'danger'},
+      {icon:'✗',label:'Cancel',action:()=>exitSelectMode()},
+    ];
+    showBottomBar(pills);
+  }
+}
+
+function openRenameForItem(id){
+  // check if it's a folder first
+  if(id.startsWith('f_')){
+    dbGet("cosm_folders", id).then(f=>{
+      if(f){
+        document.getElementById("rename-title").textContent='Rename Folder';
+        document.getElementById("rename-input").value=f.name||'';
+        document.getElementById("rename-modal").classList.add("visible");
+        document.getElementById("cosm-overlay").classList.add("active");
+        document.getElementById("rename-input").dataset.renameId=id;
+        document.getElementById("rename-input").dataset.renameType='folder';
+        setTimeout(()=>document.getElementById("rename-input").focus(),100);
+      }
+    });
+    return;
+  }
+  // discourse or note
+  dbGetAll("cosm_discourses").then(discs=>{
+    const d=discs.find(x=>x.id===id);
+    if(d){
+      document.getElementById("rename-title").textContent='Rename Discourse';
+      document.getElementById("rename-input").value=d.title||'';
+      document.getElementById("rename-modal").classList.add("visible");
+      document.getElementById("cosm-overlay").classList.add("active");
+      document.getElementById("rename-input").dataset.renameId=id;
+      document.getElementById("rename-input").dataset.renameType='discourse';
+      setTimeout(()=>document.getElementById("rename-input").focus(),100);
+    }
+  });
+}
+
+function openRenameForChar(id){
+  getCharacter(id).then(c=>{
+    if(c){
+      document.getElementById("rename-title").textContent='Rename Character';
+      document.getElementById("rename-input").value=c.name||'';
+      document.getElementById("rename-modal").classList.add("visible");
+      document.getElementById("cosm-overlay").classList.add("active");
+      document.getElementById("rename-input").dataset.renameId=id;
+      document.getElementById("rename-input").dataset.renameType='character';
+      setTimeout(()=>document.getElementById("rename-input").focus(),100);
+    }
+  });
 }
 
 function exitSelectMode(){
@@ -1496,13 +1757,14 @@ function toggleSelectItem(id){
 
 async function batchDelete(){
   if(!selectedItems.size)return;
-  if(!confirm(`Move ${selectedItems.size} item(s) to Void?`))return;
+  if(!confirm(`Burn ${selectedItems.size} item(s) to Void?`))return;
   const allD=await getDiscourses();
   const allF=await getFolders();
   const allC=await getCharacters();
   for(const id of selectedItems){
     if(allD.find(d=>d.id===id))await deleteDiscourse(id);
-    else if(allF.find(f=>f.id===id))await deleteFolder(id);
+    else if(allF.find(f=>f.id===id)){const deleted=await deleteFolder(id);if(!deleted)return;
+}
     else if(allC.find(c=>c.id===id))await deleteCharacter(id);
   }
   exitSelectMode();
@@ -1536,18 +1798,63 @@ async function batchBurn(){
   await openBurnDiscModal();
 }
 
-/* LONG PRESS WORDMARK */
 let wpt=null;
+let wTapTimer=null;
 const wEl=document.getElementById('nq-wordmark');
-wEl.addEventListener('touchstart',()=>{wEl.classList.add('pressing');wpt=setTimeout(()=>{wEl.classList.remove('pressing');switchAppMode(currentMode==='soup'?'sanctuary':'soup');if(navigator.vibrate)navigator.vibrate(40);},600);},{passive:true});
-wEl.addEventListener('touchend',()=>{wEl.classList.remove('pressing');clearTimeout(wpt);});
-wEl.addEventListener('touchmove',()=>{wEl.classList.remove('pressing');clearTimeout(wpt);});
+
+wEl.addEventListener('touchstart',()=>{
+  wEl.classList.add('pressing');
+  wpt=setTimeout(()=>{
+    clearTimeout(wTapTimer);
+    wTapTimer=null;
+    wEl.classList.remove('pressing');
+    switchAppMode(currentMode==='soup'?'sanctuary':'soup');
+    if(navigator.vibrate)navigator.vibrate(40);
+  },600);
+},{passive:true});
+
+wEl.addEventListener('touchend',()=>{
+  wEl.classList.remove('pressing');
+  if(wpt){
+    clearTimeout(wpt);
+    wpt=null;
+    // Short tap -- go home
+    wTapTimer=setTimeout(()=>{
+      goHome();
+    },50);
+  }
+});
+
+wEl.addEventListener('touchmove',()=>{
+  wEl.classList.remove('pressing');
+  clearTimeout(wpt);
+  clearTimeout(wTapTimer);
+  wpt=null;wTapTimer=null;
+});
+
+function goHome(){
+  const mt=document.getElementById('mode-toast');
+  if(currentMode==='soup'){
+    breadcrumbPath=[{id:null,name:'◈ The Soup'}];
+    currentFolderId=null;
+    deepSoupFolderId=null;
+    showPanel('view-soup');
+    renderTableView();
+    mt.textContent='◈ HOME';
+  } else {
+    showPanel('view-sanctuary');
+    renderSanctuaryView();
+    mt.textContent='◈ SANCTUARY';
+  }
+  mt.style.opacity='1';
+  setTimeout(()=>{mt.style.opacity='0';},1200);
+}
 
 /* APP MODE */
 function switchAppMode(mode){
   currentMode=mode;
   const mt=document.getElementById('mode-toast');
-  if(mode==='soup'){showPanel('view-soup');mt.textContent='✦ THE SOUP';}
+  if(mode==='soup'){showPanel('view-soup');mt.textContent='◈ THE SOUP';}
   else{showPanel('view-sanctuary');mt.textContent='◈ THE SANCTUARY';renderSanctuaryView();}
   mt.style.opacity='1';setTimeout(()=>{mt.style.opacity='0';},1500);
 updateHeaderButtons();
@@ -1556,7 +1863,7 @@ renderDefaultBar(mode);
 
 /* SHOW PANEL (Unifying logic) */
 function showPanel(id){
-  const panels=['view-soup','view-sanctuary','view-void','view-lighthouse','view-forge','view-chat','view-memory','view-persona'];
+  const panels=['view-soup','view-sanctuary','view-void','view-deep-soup','view-lighthouse','view-forge','view-chat','view-memory','view-persona'];
   panels.forEach(p=>{
     const el=document.getElementById(p);
     if(el)el.classList.add('hidden');
@@ -1575,16 +1882,26 @@ function showPanel(id){
 /* HEADER BUTTONS */
 function updateHeaderButtons(){
   const c=document.getElementById('header-actions');
-  c.innerHTML=`<button class="hdr-btn" id="hdr-void">○</button><button class="hdr-btn" id="hdr-export">⩔</button><label class="hdr-import-label">⩓<input type="file" accept=".json" id="import-json-input" style="display:none;"></label><button class="hdr-btn" id="hdr-sync">∞</button><button class="hdr-btn" id="hdr-search">⌖</button>`;
-  
+  c.innerHTML=`
+    <button class="hdr-btn" id="hdr-void">○</button>
+    <button class="hdr-btn" id="hdr-deep-soup">꩜</button>
+    <button class="hdr-btn" id="hdr-data">⩔</button>
+    <button class="hdr-btn" id="hdr-sync">∞</button>
+    <button class="hdr-btn" id="hdr-search">⌖</button>`;
+
   document.getElementById('hdr-void').onclick=()=>openVoidView();
-  document.getElementById('hdr-export').onclick=()=>{showToast('Exporting...');exportJSON();};
-  document.getElementById('import-json-input').onchange=e=>importJSON(e);
-  document.getElementById('hdr-sync').onclick = handleSync;
+  document.getElementById('hdr-deep-soup').onclick=()=>openDeepSoupView();
+  document.getElementById('hdr-data').onclick=()=>openDataModal();
+  document.getElementById('hdr-sync').onclick=handleSync;
   document.getElementById('hdr-search').onclick=()=>{
     if(currentMode==='soup')openGlobalSearch();
     else openSanctuarySearch();
   };
+}
+
+function openDataModal(){
+  document.getElementById('data-modal').classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
 }
 
 async function goBack() {
@@ -1614,6 +1931,11 @@ function openSanctuarySearch(){
 async function renderTableView() {
   const surface = document.getElementById('table-surface');
   if (!surface) return;
+  surface.onclick = (e) => {
+  if(e.target===surface && selectMode){
+    exitSelectMode();
+  }
+};
   surface.innerHTML = '';
   renderBreadcrumb();
 
@@ -1632,27 +1954,54 @@ async function renderTableView() {
   const allF = (await getFolders()) || [];
   const allD = (await getDiscourses()) || [];
 
-  const cf = allF.filter(f => !f.isDeleted && safeMatch(f.parent_id, currentFolderId));
-  const notes = allD.filter(d => !d.isDeleted && d.item_type === 'note' && safeMatch(d.folder_id, currentFolderId));
-  const discs = allD.filter(d => !d.isDeleted && d.item_type !== 'note' && safeMatch(d.folder_id, currentFolderId));
+  const allFolders = await getFolders();
+const allDiscs = await dbGetAll("cosm_discourses");
+
+const cf = allF.filter(f => !f.isDeleted && safeMatch(f.parent_id, currentFolderId));
+const notes = allD.filter(d => !d.isDeleted && d.item_type === 'note' && safeMatch(d.folder_id, currentFolderId));
+const discs = allD.filter(d => !d.isDeleted && d.item_type !== 'note' && safeMatch(d.folder_id, currentFolderId));
+
+// Decay filtering
+const activeFolders=[], fadingFolders=[], forgottenFolderCount={};
+for(const f of cf){
+  const vitality = await getFolderVitality(f.id, allFolders, allDiscs);
+  const phase = vitality ? decayPhase(vitality) : decayPhase(f.created_at||0);
+  if(phase==='active') activeFolders.push({...f, _phase:'active'});
+  else if(phase==='fading') activeFolders.push({...f, _phase:'fading'});
+  else if(phase==='forgotten'||phase==='gone') forgottenFolderCount[f.id]=true;
+}
+
+const activeDiscs=[], fadingDiscs=[];
+let forgottenDiscCount=0, forgottenSparkCount=0;
+for(const d of [...discs,...notes]){
+  const phase = decayPhase(d.updated_at||d.created_at||0);
+  if(phase==='active') activeDiscs.push({...d,_phase:'active'});
+  else if(phase==='fading') activeDiscs.push({...d,_phase:'fading'});
+  else if(phase==='forgotten'||phase==='gone'){
+    if(d.item_type==='note') forgottenSparkCount++;
+    else forgottenDiscCount++;
+  }
+}
+const forgottenFolders=Object.keys(forgottenFolderCount).length;
+
 
   if (window.firefly) firefly.sd(allD.reduce((s, d) => s + (d.raw_text || '').length, 0));
 
-  if (!cf.length && !discs.length && !notes.length) {
+  if (!activeFolders.length && !activeDiscs.length && !forgottenFolders && !forgottenDiscCount && !forgottenSparkCount) {
     surface.innerHTML = `<div class="table-empty"><div class="table-empty-glyph">◈</div><div class="table-empty-text">${isAtRoot ? 'Create a folder to begin' : 'Empty Abyss'}</div></div>`;
     return;
   }
 
-  if (cf.length) {
+  if (activeFolders.length) {
     const l = document.createElement('div'); l.className = 'cards-section-label'; l.textContent = 'Folders'; surface.appendChild(l);
     const g = document.createElement('div'); g.className = 'cards-grid';
-    for (const f of cf) {
+    for (const f of activeFolders) {
       const dc = allD.filter(d => safeMatch(d.folder_id, f.id) && d.item_type !== 'note' && !d.isDeleted).length;
       const nc = allD.filter(d => safeMatch(d.folder_id, f.id) && d.item_type === 'note' && !d.isDeleted).length;
       const sc = allF.filter(sf => safeMatch(sf.parent_id, f.id) && !sf.isDeleted).length;
       const meta = [];
       if (dc > 0) meta.push(dc + (dc === 1 ? ' discourse' : ' discourses'));
-      if (nc > 0) meta.push(nc + (nc === 1 ? ' note' : ' notes'));
+      if (nc > 0) meta.push(nc + (nc === 1 ? ' note' : ' sparks'));
       if (sc > 0) meta.push(sc + (sc === 1 ? ' folder' : ' folders'));
 
       const card = document.createElement('div');
@@ -1660,6 +2009,8 @@ async function renderTableView() {
       if (typeof selectedItems !== 'undefined' && selectedItems.has(f.id)) card.classList.add('card-selected');
       
       card.innerHTML = `<div class="folder-card-top"><span class="folder-icon-glyph">▤</span></div><div class="folder-card-name">${escHtml(f.name)}</div><div class="folder-card-meta">${meta.length ? meta.join(' · ') : 'Empty'}</div>`;
+      
+      if(f._phase==='fading') card.classList.add('card-fading');
       
       card.onclick = () => {
         if (window.longPressConsumed) { window.longPressConsumed = false; return; }
@@ -1677,20 +2028,90 @@ async function renderTableView() {
     surface.appendChild(g);
   }
 
-  if (discs.length) {
-    const l = document.createElement('div'); l.className = 'cards-section-label'; l.textContent = 'Discourses'; surface.appendChild(l);
-    const g = document.createElement('div'); g.className = 'cards-grid';
-    for (const d of discs) g.appendChild(await buildDiscourseCard(d));
-    surface.appendChild(g);
-  }
+  const activeDiscourses = activeDiscs.filter(d=>d.item_type!=='note');
+const activeSparks = activeDiscs.filter(d=>d.item_type==='note');
 
-  if (notes.length) {
-    const l = document.createElement('div'); l.className = 'cards-section-label'; l.textContent = 'Notes'; surface.appendChild(l);
-    const g = document.createElement('div'); g.className = 'cards-grid';
-    for (const n of notes) g.appendChild(await buildDiscourseCard(n));
-    surface.appendChild(g);
+if(activeDiscourses.length){
+  const l=document.createElement('div');l.className='cards-section-label';l.textContent='Discourses';surface.appendChild(l);
+  const g=document.createElement('div');g.className='cards-grid';
+  for(const d of activeDiscourses){
+    const card=await buildDiscourseCard(d);
+    if(d._phase==='fading') card.classList.add('card-fading');
+    g.appendChild(card);
+  }
+  surface.appendChild(g);
+}
+
+if(activeSparks.length){
+  const l=document.createElement('div');l.className='cards-section-label';l.textContent='Sparks';surface.appendChild(l);
+  const g=document.createElement('div');g.className='cards-grid';
+  for(const d of activeSparks){
+    const card=await buildDiscourseCard(d);
+    if(d._phase==='fading') card.classList.add('card-fading');
+    g.appendChild(card);
+  }
+  surface.appendChild(g);
+}
+// Spawn motes for forgotten items in this view
+const totalForgotten = forgottenDiscCount + forgottenSparkCount;
+if(totalForgotten > 0) spawnMotes(surface, totalForgotten, false);
+if(forgottenFolders > 0) spawnMotes(surface, forgottenFolders, true);
+}
+
+/* DECAY SYSTEM */
+const DECAY_FADING_DAYS = 14;
+const DECAY_FORGOTTEN_DAYS = 30;
+const DECAY_MOTE_DIES_DAYS = 60;
+const DAY_MS = 86400000;
+
+function decayPhase(updatedAt){
+  const age = Date.now() - updatedAt;
+  if(age < DECAY_FADING_DAYS * DAY_MS) return 'active';
+  if(age < DECAY_FORGOTTEN_DAYS * DAY_MS) return 'fading';
+  if(age < DECAY_MOTE_DIES_DAYS * DAY_MS) return 'forgotten';
+  return 'gone';
+}
+
+async function getFolderVitality(folderId, allF, allD){
+  // Find youngest updated_at among all contents recursively
+  const children = allD.filter(d => {
+    const isANull = (!d.folder_id||String(d.folder_id)==='null');
+    const isBNull = (!folderId||String(folderId)==='null');
+    if(isANull&&isBNull) return true;
+    return String(d.folder_id)===String(folderId);
+  });
+  const subfolders = allF.filter(f => {
+    const isANull = (!f.parent_id||String(f.parent_id)==='null');
+    const isBNull = (!folderId||String(folderId)==='null');
+    if(isANull&&isBNull) return false;
+    return String(f.parent_id)===String(folderId);
+  });
+
+  let youngest = 0;
+  for(const d of children) if((d.updated_at||0) > youngest) youngest = d.updated_at||0;
+  for(const sf of subfolders){
+    const sfVitality = await getFolderVitality(sf.id, allF, allD);
+    if(sfVitality > youngest) youngest = sfVitality;
+  }
+  return youngest || 0;
+}
+
+function spawnMotes(surface, count, heavy=false){
+  const max = Math.min(count, heavy ? 1 : 8);
+  for(let i=0; i<max; i++){
+    const mote = document.createElement('div');
+    mote.className = 'decay-mote' + (heavy?' heavy':'');
+    // Random position within surface
+    const x = 10 + Math.random() * 80;
+    const y = 10 + Math.random() * 70;
+    // Random drift direction
+    const mx = (Math.random()-0.5)*30;
+    const my = (Math.random()-0.5)*20;
+    mote.style.cssText = `left:${x}%;top:${y}%;--mx:${mx}px;--my:${my}px;animation-delay:${Math.random()*8}s;animation-duration:${10+Math.random()*6}s;`;
+    surface.appendChild(mote);
   }
 }
+
 
 async function buildDiscourseCard(d){
   const tile = await getMosaicTile(d.id), hasMosaic = tile && tile.anchors && tile.anchors.length > 0;
@@ -1735,23 +2156,151 @@ function renderBreadcrumb(){
   });
 }
 
+/* THE GOLD LINE LOGIC */
+let threadSleepTimer = null;
+
+function awakenGoldLine() {
+  const zone = document.getElementById('gold-line-zone');
+  const thread = document.getElementById('gold-thread');
+  if (!zone || currentMode !== 'soup') return;
+
+  // Only wobble if it was fully asleep
+  if (!zone.classList.contains('awake')) {
+    thread.classList.remove('wobble');
+    void thread.offsetWidth; // trigger reflow
+    thread.classList.add('wobble');
+  }
+
+  zone.classList.add('awake');
+
+  // Reset the sleep timer
+  if (threadSleepTimer) clearTimeout(threadSleepTimer);
+  threadSleepTimer = setTimeout(() => {
+    zone.classList.remove('awake');
+  }, 2500); // Fades out after 2.5 seconds of stillness
+}
+
+function renderGoldTicks() {
+  const container = document.getElementById('gold-ticks-container');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const depth = breadcrumbPath.length;
+  // If we are at root (depth 1), just show one tick at the top
+  // If we are deep, space them evenly along the thread
+  
+  for (let i = 0; i < depth; i++) {
+    const tick = document.createElement('div');
+    tick.className = 'gold-tick' + (i === depth - 1 ? ' current' : '');
+    
+    // Calculate vertical position (20px top padding + evenly spaced)
+    const availableHeight = window.innerHeight * 0.6;
+const spacing = depth > 1 ? (i * (availableHeight / (depth - 1))) : 0;
+    tick.style.top = `calc(20px + ${spacing}px)`; 
+    
+    container.appendChild(tick);
+  }
+}
+
+/* LINEAGE NAVIGATOR LOGIC */
+async function openLineage() {
+  const panel = document.getElementById('lineage-panel');
+  const overlay = document.getElementById('lineage-overlay');
+  const content = document.getElementById('lineage-content');
+  if (!panel || !overlay || !content) return;
+
+  const allFRaw = await getFolders();
+const allDRaw = await dbGetAll("cosm_discourses");
+// Filter out forgotten folders from lineage
+const allF = [];
+for(const f of allFRaw){
+  if(f.isDeleted) continue;
+  const vitality = await getFolderVitality(f.id, allFRaw, allDRaw);
+  const phase = vitality ? decayPhase(vitality) : decayPhase(f.created_at||0);
+  if(phase==='active'||phase==='fading') allF.push(f);
+}
+  const safeMatch = (a, b) => (String(a || 'null') === String(b || 'null'));
+  
+  content.innerHTML = '';
+  
+  for (let i = 0; i < breadcrumbPath.length; i++) {
+    const seg = breadcrumbPath[i];
+    const isCurrent = (i === breadcrumbPath.length - 1);
+    
+    const levelDiv = document.createElement('div');
+    levelDiv.className = 'lineage-level' + (isCurrent ? ' current' : '');
+    
+    // The vertical node
+    levelDiv.innerHTML = `
+      <div class="lineage-level-dot"></div>
+      <div class="lineage-level-name" onclick="navToBc(${i}); closeLineage();">${escHtml(seg.name)}</div>
+    `;
+    
+    // NEW LOGIC: The sideways glances are the OTHER children of this level
+    // What path did we actually take?
+    const nextSeg = isCurrent ? null : breadcrumbPath[i+1];
+    
+    // Get all folders that live inside THIS segment
+    const childrenOfThisLevel = allF.filter(f => !f.isDeleted && safeMatch(f.parent_id, seg.id));
+    
+    // Filter out the path we took, leaving only the alternative "glances"
+    const alternativePaths = nextSeg 
+        ? childrenOfThisLevel.filter(f => !safeMatch(f.id, nextSeg.id))
+        : childrenOfThisLevel; // If it's the bottom folder, show all children as quick-links
+
+    if (alternativePaths.length > 0) {
+      const sibContainer = document.createElement('div');
+      sibContainer.className = 'lineage-siblings';
+      for (const alt of alternativePaths) {
+        const btn = document.createElement('button');
+        btn.className = 'lineage-sibling-btn';
+        btn.textContent = escHtml(alt.name);
+        btn.onclick = () => {
+          // Slice the path down to THIS level, then step into the new alternative path
+          breadcrumbPath = breadcrumbPath.slice(0, i + 1);
+          enterFolder(alt.id, alt.name);
+          closeLineage();
+        };
+        sibContainer.appendChild(btn);
+      }
+      levelDiv.appendChild(sibContainer);
+    }
+    
+    content.appendChild(levelDiv);
+  }
+  
+  panel.classList.add('open');
+  overlay.classList.add('active');
+}
+
+function closeLineage() {
+  document.getElementById('lineage-panel').classList.remove('open');
+  document.getElementById('lineage-overlay').classList.remove('active');
+}
+
 function enterFolder(id, name){
   const folderId=(id==='root')?null:id;
   breadcrumbPath.push({id:folderId, name:name});
   currentFolderId=folderId;
   renderTableView();
+  renderGoldTicks(); // NEW
+  awakenGoldLine();  // NEW
 }
 
 function navToBc(idx){
   breadcrumbPath=breadcrumbPath.slice(0,idx+1);
   currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;
   renderTableView();
+  renderGoldTicks(); // NEW
+  awakenGoldLine();  // NEW
 }
 
 async function openDiscourse(id){
   if(currentDiscourseId&&id!==currentDiscourseId)await saveCurrentDiscourse(true);
-  const disc=await getDiscourse(id);if(!disc){showToast("Discourse not found");return;}
+  const disc=await getDiscourse(id);if(!disc){showToast("Discourse not found ◆");return;}
   currentDiscourseId=id;
+    // ---> SENSEI'S INCISION: Silent Attention Bump
+  await dbPut("cosm_discourses", {...disc, updated_at: Date.now()}); 
   document.getElementById("discourse-title").value=disc.title||"";
   document.getElementById("content-textarea").value=disc.raw_text||"";
   await renderMeta(disc);await renderMosaicDisplay(id);
@@ -1782,51 +2331,64 @@ async function saveCurrentDiscourse(silent=false){
   const title=document.getElementById("discourse-title").value.trim()||"Untitled Discourse";
   const raw_text=document.getElementById("content-textarea").value;
   await updateDiscourse(currentDiscourseId,{title,raw_text});
-  if(!silent)showToast("Saved ✓");
+  if(!silent)showToast("Saved ◆");
   setTimeout(()=>backupToAkashic(),0);
 }
 
-async function newDiscourseInCurrent(){
-  const fId=currentFolderId;if(currentDiscourseId)await saveCurrentDiscourse(true);
-  const disc=await createDiscourse({title:"Untitled Discourse",raw_text:"",folder_id:fId});
-  await openDiscourse(disc.id);setTimeout(()=>{const t=document.getElementById("discourse-title");t.select();t.focus();},120);
-}
-
-function handleNewDiscourse() {
-  if (!currentFolderId || currentFolderId === 'root') {
-    newDiscourseAtSoup();
-  } else {
-    newDiscourseInCurrent();
-  }
-}
-
-async function newDiscourseAtSoup() {
-  const folders = await getFolders();
-  const count = folders.filter(f => f.name && f.name.startsWith('Unknown_')).length + 1;
-  const fn = `Unknown_${count}`;
-  
-  const fId = await createFolder(fn, null);
-  currentFolderId = fId;
-  const disc = await createDiscourse({
-    title: "Untitled Discourse",
-    raw_text: "",
-    folder_id: fId
+async function handleNewDiscourse(){
+  const folders=await getFolders();
+  const sel=document.getElementById('discourse-modal-folder');
+  sel.innerHTML='<option value="">-- Choose folder (or auto-wrap) --</option>';
+  folders.filter(f=>!f.isDeleted).forEach(f=>{
+    const o=document.createElement('option');
+    o.value=f.id;o.textContent=f.name;
+    if(f.id===currentFolderId)o.selected=true;
+    sel.appendChild(o);
   });
+  const no=document.createElement('option');no.value='__new__';no.textContent='+ New folder...';sel.appendChild(no);
+  document.getElementById('discourse-modal-title').value='';
+  document.getElementById('discourse-modal-new-folder').style.display='none';
+  document.getElementById('discourse-modal').classList.add('visible');
+  document.getElementById('cosm-overlay').classList.add('active');
+  setTimeout(()=>document.getElementById('discourse-modal-title').focus(),100);
+}
+
+async function confirmNewDiscourse(){
+  const title=document.getElementById('discourse-modal-title').value.trim()||'Untitled Discourse';
+  let fId=document.getElementById('discourse-modal-folder').value||null;
   
-  breadcrumbPath = [{id: null, name: '◈ The Soup'}, {id: fId, name: fn}];
+  if(fId==='__new__'){
+    const nfn=document.getElementById('discourse-modal-new-folder').value.trim();
+    if(!nfn){showToast('Type a folder name ◆');return;}
+    fId=await createFolder(nfn,currentFolderId||null);
+    breadcrumbPath=[{id:null,name:'◈ The Soup'},{id:fId,name:nfn}];
+    currentFolderId=fId;
+  } else if(!fId){
+    // auto-wrap in Unknown_N
+    const all=await getFolders();
+    const count=all.filter(f=>f.name&&f.name.startsWith('Unknown_')).length+1;
+    const fn=`Unknown_${count}`;
+    fId=await createFolder(fn,null);
+    breadcrumbPath=[{id:null,name:'◈ The Soup'},{id:fId,name:fn}];
+    currentFolderId=fId;
+  } else {
+    const f=await dbGet('cosm_folders',fId);
+    if(f){breadcrumbPath=[{id:null,name:'◈ The Soup'},{id:fId,name:f.name}];currentFolderId=fId;}
+  }
+  
+  closeOverlay();
+  if(currentDiscourseId)await saveCurrentDiscourse(true);
+  const disc=await createDiscourse({title,raw_text:'',folder_id:fId});
   await openDiscourse(disc.id);
-  
-  setTimeout(() => {
-    const t = document.getElementById("discourse-title");
-    if (t) { t.select(); t.focus(); }
-  }, 120);
-  
-  showToast(`Created ${fn}`);
+  setTimeout(()=>{
+    const t=document.getElementById('discourse-title');
+    if(t){t.select();t.focus();}
+  },120);
 }
 
 async function deleteCurrentDiscourse() {
   if (!currentDiscourseId) return;
-  if (!confirm("Move this discourse to the Void?")) return;
+  if (!confirm("Burn this discourse to the Void?")) return;
   await deleteDiscourse(currentDiscourseId);
   currentDiscourseId = null;
   goBack();
@@ -1911,7 +2473,7 @@ temperature:parseFloat(document.getElementById('forge-temp').value)
   };
   if(activeCharId)await updateCharacter(activeCharId,data);
   else await createCharacter(data);
-  showToast("Soul Anchored ✓");
+  showToast("Soul Anchored ◆");
   closeCharacterForge();
 }
 
@@ -1972,7 +2534,7 @@ async function summariseHistory(charId,messages){
     if(summary){
       const id="s_"+Date.now();
       await dbPut("summaries",{id,charId,text:summary,created_at:Date.now(),type:"auto"});
-      showToast("Memory crystallised ◈");
+      showToast("Memory crystallised ◆");
     }
     return summary;
   }catch(err){console.error("Summarise failed:",err);return null;}
@@ -1981,7 +2543,7 @@ async function summariseHistory(charId,messages){
 async function saveManualMemory(charId,text){
   if(!text||!charId)return;
   await dbPut("summaries",{id:"sm_"+Date.now(),charId,text,created_at:Date.now(),type:"manual"});
-  showToast("Memory anchored ✦");
+  showToast("Memory anchored ◆");
 }
 
 async function getMemoryContext(charId){
@@ -2038,7 +2600,7 @@ async function renderMemoryView(){
 async function deleteMemory(id){
   await dbDelete('summaries',id);
   await renderMemoryView();
-  showToast('Memory removed');
+  showToast('Memory removed ◆');
 }
 
 async function addManualAnchor(){
@@ -2057,11 +2619,11 @@ function updatePersonaPill(){
   if(chatPersonaOverride){
     const roles=getPersonaRoles();
     const r=roles.find(r=>r.id===chatPersonaOverride);
-    pill.textContent=r?'◈ '+r.name:'◈ default';
+    pill.textContent=r?'⁂ '+r.name:'⁂ default';
     pill.style.borderColor='var(--accent-dim)';
     pill.style.color='var(--accent)';
   } else {
-    pill.textContent='◈ default';
+    pill.textContent='⁂ default';
     pill.style.borderColor='var(--border)';
     pill.style.color='var(--muted)';
   }
@@ -2069,13 +2631,13 @@ function updatePersonaPill(){
 
 function openPersonaPillSelector(){
   const roles=getPersonaRoles();
-  if(!roles.length){showToast('No roles yet — create in Persona page');return;}
+  if(!roles.length){showToast('No roles yet -- create in Persona page');return;}
   const modal=document.getElementById('persona-select-modal');
   const list=document.getElementById('persona-select-list');
   list.innerHTML='';
   const defBtn=document.createElement('button');
   defBtn.className='management-btn';
-  defBtn.innerHTML='<span>◈</span> Default (global only)';
+  defBtn.innerHTML='<span>⁂</span> Default (global only)';
   defBtn.addEventListener('click',()=>{
     chatPersonaOverride=null;
     updatePersonaPill();
@@ -2085,7 +2647,7 @@ function openPersonaPillSelector(){
   roles.forEach(r=>{
     const btn=document.createElement('button');
     btn.className='management-btn'+(chatPersonaOverride===r.id?' gold':'');
-    btn.innerHTML=`<span>◈</span> ${escHtml(r.name)}`;
+    btn.innerHTML=`<span>⁂</span> ${escHtml(r.name)}`;
     btn.addEventListener('click',()=>{
       chatPersonaOverride=r.id;
       updatePersonaPill();
@@ -2174,7 +2736,7 @@ Respond in character, concise and evocative.${personaBlock}${memoryBlock}`;
     return data.choices?.[0]?.message?.content||null;
   }catch(err){
     console.error(err);
-    showToast("AI network failure.");
+    showToast("AI network failure ◆");
     return null;
   }
 }
@@ -2207,10 +2769,168 @@ async function renderVoidView(){
   s.appendChild(list);
 }
 
+function buildForgottenCard(d){
+  const date=new Date(d.updated_at||d.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  const preview=d.raw_text?d.raw_text.replace(/\n+/g,' ').slice(0,80):'';
+  const card=document.createElement('div');
+  // No click handler -- dead card, only Surface button acts
+  card.className='discourse-card card card-fading';
+  card.style.cursor='default';
+  card.innerHTML=`
+    <div class="discourse-card-title">${escHtml(d.title||'Untitled')}</div>
+    ${preview?`<div class="discourse-card-preview">${escHtml(preview)}</div>`:''}
+    <div class="discourse-card-footer">
+      <span class="discourse-card-date">${date}</span>
+    </div>
+    <button class="surface-btn" data-id="${d.id}" style="margin-top:8px;background:none;border:1px solid var(--accent-dim);color:var(--accent);font-size:10px;padding:4px 10px;border-radius:6px;font-weight:700;width:100%;">Surface ◆</button>
+  `;
+  // Wire Surface button directly
+  card.querySelector('.surface-btn').addEventListener('click', async(e)=>{
+    e.stopPropagation();
+    await updateDiscourse(d.id,{updated_at:Date.now()});
+    showToast('Surfaced ◆');
+    await renderDeepSoupView();
+  });
+  return card;
+}
+
+/* DEEP SOUP */
+function openDeepSoupView(){ 
+  deepSoupFolderId=null;
+  deepSoupPath=[{id:null, name:'꩜ Deep Soup'}];
+  showPanel('view-deep-soup'); 
+  renderDeepSoupView(); 
+}
+
+function renderDeepSoupBreadcrumb(){
+  const bar = document.getElementById('deep-soup-breadcrumb');
+  if(!bar) return;
+  bar.innerHTML = '';
+  deepSoupPath.forEach((seg, idx) => {
+    const isLast = idx === deepSoupPath.length - 1;
+    const segEl = document.createElement('div');
+    segEl.className = 'breadcrumb-seg';
+    const btn = document.createElement('button');
+    btn.className = 'breadcrumb-btn' + (isLast ? ' current' : '');
+    btn.textContent = seg.name;
+    if(!isLast){
+      btn.addEventListener('click', ()=>{
+        deepSoupPath = deepSoupPath.slice(0, idx + 1);
+        deepSoupFolderId = seg.id;
+        renderDeepSoupView();
+      });
+    }
+    segEl.appendChild(btn);
+    if(!isLast){
+      const arrow = document.createElement('span');
+      arrow.className = 'breadcrumb-arrow';
+      arrow.textContent = '▸';
+      segEl.appendChild(arrow);
+    }
+    bar.appendChild(segEl);
+  });
+}
+
+async function renderDeepSoupView(){
+  const surface = document.getElementById('deep-soup-surface');
+  surface.innerHTML = '';
+renderDeepSoupBreadcrumb();
+  const allF = await getFolders();
+  const allD = await dbGetAll("cosm_discourses");
+  const safeMatch=(a,b)=>{
+    const isANull=(!a||String(a)==='null'||String(a)==='root'||String(a)==='undefined');
+    const isBNull=(!b||String(b)==='null'||String(b)==='root'||String(b)==='undefined');
+    if(isANull&&isBNull)return true;
+    return String(a)===String(b);
+  };
+
+  // Forgotten discourses and sparks at current folder level
+  const forgottenItems = allD.filter(d=>{
+    if(d.isDeleted) return false;
+    if(!safeMatch(d.folder_id, deepSoupFolderId !== null ? deepSoupFolderId : currentFolderId)) return false;
+    const phase = decayPhase(d.updated_at||d.created_at||0);
+    return phase==='forgotten'||phase==='gone';
+  });
+
+  // Forgotten folders at current level
+  const forgottenFolders = [];
+  const rootFolders = allF.filter(f=>!f.isDeleted&&safeMatch(f.parent_id, deepSoupFolderId !== null ? deepSoupFolderId : currentFolderId));
+  for(const f of rootFolders){
+    const vitality = await getFolderVitality(f.id, allF, allD);
+    const phase = vitality ? decayPhase(vitality) : decayPhase(f.created_at||0);
+    if(phase==='forgotten'||phase==='gone') forgottenFolders.push(f);
+  }
+
+  if(!forgottenItems.length && !forgottenFolders.length){
+  // If we're inside a forgotten folder, show surface option
+  if(deepSoupFolderId!==null){
+    surface.innerHTML=`
+      <div class="table-empty">
+        <div class="table-empty-glyph">⊹</div>
+        <div class="table-empty-text">Everything inside has faded</div>
+        <button style="margin-top:16px;background:none;border:1px solid var(--accent-dim);color:var(--accent);font-size:11px;padding:8px 18px;border-radius:8px;font-weight:700;" id="btn-surface-folder">◆ Surface this folder</button>
+      </div>`;
+    document.getElementById('btn-surface-folder').addEventListener('click',async()=>{
+      const f=await dbGet('cosm_folders',deepSoupFolderId);
+      if(f){
+        await dbPut('cosm_folders',{...f,updated_at:Date.now()});
+        showToast('Folder surfaced ◆');
+        deepSoupFolderId=null;
+        renderDeepSoupView();
+      }
+    });
+    return;
+  }
+  surface.innerHTML='<div class="table-empty"><div class="table-empty-glyph">⊹</div><div class="table-empty-text">Nothing forgotten here</div></div>';
+  return;
+}
+
+  if(forgottenFolders.length){
+    const l=document.createElement('div');l.className='cards-section-label';l.textContent='Forgotten Folders';surface.appendChild(l);
+    const g=document.createElement('div');g.className='cards-grid';
+    for(const f of forgottenFolders){
+      const card=document.createElement('div');
+      card.className='folder-card card card-fading';
+      card.innerHTML=`<div class="folder-card-top"><span class="folder-icon-glyph">▤</span></div><div class="folder-card-name">${escHtml(f.name)}</div><div class="folder-card-meta">Forgotten</div>`;
+      card.onclick=()=>{
+  deepSoupFolderId=f.id;
+  deepSoupPath.push({id:f.id, name:f.name});
+  renderDeepSoupView();
+};
+
+      g.appendChild(card);
+    }
+    surface.appendChild(g);
+  }
+
+  const forgottenDiscs=forgottenItems.filter(d=>d.item_type!=='note');
+  const forgottenSparks=forgottenItems.filter(d=>d.item_type==='note');
+
+  if(forgottenDiscs.length){
+  const l=document.createElement('div');l.className='cards-section-label';l.textContent='Forgotten Discourses';surface.appendChild(l);
+  const g=document.createElement('div');g.className='cards-grid';
+  for(const d of forgottenDiscs){
+    const card=buildForgottenCard(d);
+    g.appendChild(card);
+  }
+  surface.appendChild(g);
+}
+
+if(forgottenSparks.length){
+  const l=document.createElement('div');l.className='cards-section-label';l.textContent='Forgotten Sparks';surface.appendChild(l);
+  const g=document.createElement('div');g.className='cards-grid';
+  for(const d of forgottenSparks){
+    const card=buildForgottenCard(d);
+    g.appendChild(card);
+  }
+  surface.appendChild(g);
+}
+}
+
 function openVoidView() { showPanel('view-void'); renderVoidView(); }
-async function handleRestore(id,type){if(type==='discourse')await restoreDiscourse(id);else await restoreCharacter(id);showToast("Restored ✓");await renderVoidView();}
-async function handlePurge(id,type){if(!confirm("Permanently delete?"))return;if(type==='discourse')await purgeDiscourse(id);else await purgeCharacter(id);showToast("Purged");await renderVoidView();}
-async function purgeAll(){const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();if(!delD.length&&!delC.length){showToast("Void is empty");return;}if(!confirm(`Permanently delete all items?`))return;for(const d of delD)await purgeDiscourse(d.id);for(const c of delC)await purgeCharacter(c.id);showToast("Void purged");await renderVoidView();}
+async function handleRestore(id,type){if(type==='discourse')await restoreDiscourse(id);else await restoreCharacter(id);showToast("Restored ◆");await renderVoidView();}
+async function handlePurge(id,type){if(!confirm("Permanently delete?"))return;if(type==='discourse')await purgeDiscourse(id);else await purgeCharacter(id);showToast("Purged ◆");await renderVoidView();}
+async function purgeAll(){const delD=await getDeletedDiscourses(),delC=await getDeletedCharacters();if(!delD.length&&!delC.length){showToast("Void is empty ◆");return;}if(!confirm(`Permanently delete all items?`))return;for(const d of delD)await purgeDiscourse(d.id);for(const c of delC)await purgeCharacter(c.id);showToast("Void purged");await renderVoidView();}
 
 /* SEARCH */
 function onSearchInput(val){searchQuery=val.trim().toLowerCase();renderTableView();}
@@ -2249,96 +2969,27 @@ function closeFolderModal(){document.getElementById("folder-modal").classList.re
 async function confirmNewFolder(){
   const name=document.getElementById("folder-name-input").value.trim();if(!name)return;
   const parentId=document.getElementById("folder-parent-select").value||null;
-  await createFolder(name,parentId);document.getElementById("folder-name-input").value='';closeFolderModal();await renderTableView();showToast("Folder created");
-}
-
-/* MANAGEMENT */
-function openManagementModal(item){
-  mgmtItem=item;
-  const pills=[
-    {icon:'✎',label:'Rename',action:()=>{ renderDefaultBar(currentMode); openRenameModal(); }},
-    {icon:'▤',label:'Move',action:()=>{ renderDefaultBar(currentMode); openMoveModal(); }},
-    {icon:'↓',label:'Export',action:()=>{renderDefaultBar(currentMode);handleMgmtExport();}},
-    {icon:'◈',label:'Select',action:()=>{ renderDefaultBar(currentMode); enterSelectMode(item); }},
-    {icon:'✕',label:'Delete',action:()=>{ renderDefaultBar(currentMode); handleMgmtDelete(); },style:'danger'},
-  ];
-  showBottomBar(pills);
-}
-
-async function handleMgmtExport() {
-  if(!mgmtItem)return;
-  if(mgmtItem.type==='folder') await exportFolderContents(mgmtItem.id);
-  else if(mgmtItem.type==='discourse') await exportDiscourseHTML(mgmtItem.id);
-  else showToast("Cannot export character directly");
-  resetToDefaultBar();
-}
-
-function resetToDefaultBar(){
-  mgmtItem=null;
-  renderDefaultBar(currentMode);
-}
-
-async function handleMgmtDelete(){
-  if(!mgmtItem)return;const item=mgmtItem;
-  if(item.type==='folder'){if(!confirm(`Delete folder "${item.name}"?`))return;await deleteFolder(item.id);if(currentFolderId===item.id){breadcrumbPath.pop();currentFolderId=breadcrumbPath[breadcrumbPath.length-1].id;}await renderTableView();showToast("Folder deleted");}
-  else if(item.type==='character'){if(!confirm(`Delete character "${item.name}"?`))return;await deleteCharacter(item.id);await renderSanctuaryView();showToast("Character moved to Void");}
-  else{if(!confirm(`Move "${item.name}" to the Void?`))return;await deleteDiscourse(item.id);await renderTableView();showToast("Moved to Void ◌");}
-}
-
-/* RENAME */
-function openRenameModal(){
-  if(!mgmtItem)return;
-  document.getElementById("rename-title").textContent=mgmtItem.type==='folder'?'Rename Folder':'Rename Discourse';
-  document.getElementById("rename-input").value=mgmtItem.name||'';
-  document.getElementById("rename-modal").classList.add("visible");
-  document.getElementById("cosm-overlay").classList.add("active");
-  setTimeout(()=>document.getElementById("rename-input").focus(),100);
+  await createFolder(name,parentId);document.getElementById("folder-name-input").value='';closeFolderModal();await renderTableView();showToast("Folder created ◆");
 }
 
 async function confirmRename(){
-  if(!mgmtItem)return;
   const n=document.getElementById("rename-input").value.trim();
   if(!n)return;
-  if(mgmtItem.type==='folder')await dbPut("cosm_folders",{...mgmtItem.data,name:n});
-  else if(mgmtItem.type==='character'){await updateCharacter(mgmtItem.id,{name:n});renderSanctuaryView();}
-  else await updateDiscourse(mgmtItem.id,{title:n});
-  closeRenameModal();
+  const id=document.getElementById("rename-input").dataset.renameId;
+  const type=document.getElementById("rename-input").dataset.renameType;
+  if(!id)return;
+  if(type==='folder')await dbPut("cosm_folders",{...(await dbGet("cosm_folders",id)),name:n});
+  else if(type==='character'){await updateCharacter(id,{name:n});renderSanctuaryView();}
+  else await updateDiscourse(id,{title:n});
+  closeOverlay();
   await renderTableView();
-  resetToDefaultBar();
-  showToast("Renamed");
-}
-
-/* MOVE */
-function openMoveModal(){
-  if(!mgmtItem)return;
-  const sel=document.getElementById("move-parent-select");
-  sel.innerHTML='<option value="">The Soup</option>';
-  getFolders().then(folders=>{
-    folders.filter(f=>f.id!==mgmtItem.id).forEach(f=>{
-      const o=document.createElement('option');
-      o.value=f.id;o.textContent=f.name;
-      const cp=mgmtItem.type==='folder'?mgmtItem.data.parent_id:mgmtItem.data.folder_id;
-      if(f.id===cp)o.selected=true;
-      sel.appendChild(o);
-    });
-  });
-  document.getElementById("move-modal").classList.add("visible");
-  document.getElementById("cosm-overlay").classList.add("active");
-}
-
-function closeMoveModal(){document.getElementById("move-modal").classList.remove("visible");closeOverlay();}
-async function confirmMove(){
-  if(!mgmtItem)return;const np=document.getElementById("move-parent-select").value||null;
-  if(mgmtItem.type==='folder'){if(np===mgmtItem.id){showToast("Can't move into itself");return;}if(np){const af=await getFolders();let ci=np;while(ci){const p=af.find(f=>f.id===ci);if(!p)break;if(p.parent_id===mgmtItem.id){showToast("Can't move into a child");return;}ci=p.parent_id;}}await dbPut("cosm_folders",{...mgmtItem.data,parent_id:np});}
-  else await updateDiscourse(mgmtItem.id,{folder_id:np});
-  let dn="The Soup";if(np){const df=await dbGet("cosm_folders",np);if(df)dn=df.name;}
-  closeMoveModal();mgmtItem=null;await renderTableView();showToast(`Moved to ${dn}`);
+  showToast("Renamed ◆");
 }
 
 /* QUICK CAPTURE */
 let _cs=false;
 async function openQuickCapture(){
-  const sel=document.getElementById('capture-folder');sel.innerHTML='<option value="">-- Choose folder --</option>';
+  const sel=document.getElementById('capture-folder');sel.innerHTML='<option value="">-- Auto-wrap in folder --</option>';
   const folders=await getFolders();folders.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.name;if(f.id===currentFolderId)o.selected=true;sel.appendChild(o);});
   const no=document.createElement('option');no.value='__new__';no.textContent='+ New folder...';sel.appendChild(no);
   document.getElementById('capture-title').value='';document.getElementById('capture-title').dataset.userEdited='';
@@ -2352,13 +3003,19 @@ async function confirmQuickCapture(){
   if(_cs)return;_cs=true;
   try{
     const title=document.getElementById('capture-title').value.trim()||'Untitled Capture';
-    const raw_text=document.getElementById('capture-body').value.trim();if(!raw_text){showToast('Nothing to capture');return;}
-    let fId=document.getElementById('capture-folder').value||currentFolderId||null;let isNF=false;let nfn='';
-    if(fId==='__new__'){nfn=document.getElementById('capture-new-folder-input').value.trim();if(!nfn){showToast('Type a folder name first');return;}fId=await createFolder(nfn,currentFolderId);isNF=true;}
+    const raw_text=document.getElementById('capture-body').value.trim();if(!raw_text){showToast('Nothing to Spark ◆');return;}
+    let fId=document.getElementById('capture-folder').value||null;let isNF=false;let nfn='';
+    if(fId==='__new__'){nfn=document.getElementById('capture-new-folder-input').value.trim();if(!nfn){showToast('Type a folder name first ◆');return;}fId=await createFolder(nfn,currentFolderId);isNF=true;}
+    if(!fId){
+  const all=await getFolders();
+  const count=all.filter(f=>f.name&&f.name.startsWith('Unknown_')).length+1;
+  const fn=`Unknown_${count}`;
+  fId=await createFolder(fn,currentFolderId||null);
+  isNF=true;nfn=fn;}
     const now=Date.now();await dbPut('cosm_discourses',{id:'n_'+now,title,raw_text,folder_id:fId,source_link:null,item_type:'note',created_at:now,updated_at:now});
     closeQuickCapture();if(navigator.vibrate)navigator.vibrate(50);
-    if(isNF)enterFolder(fId,nfn);else await renderTableView();showToast('Captured ✦');
-  }catch(err){console.error(err);showToast('Capture failed');}finally{_cs=false;}
+    if(isNF)enterFolder(fId,nfn);else await renderTableView();showToast('Sparked ◆');
+  }catch(err){console.error(err);showToast('Spark failed ◆');}finally{_cs=false;}
 }
 
 // 1. Initial State
@@ -2397,7 +3054,7 @@ function summonNewModel() {
     renderModelSelect();
     document.getElementById('input-model').value = val;
     input.value = '';
-    showToast("Engine Summoned");
+    showToast("Engine Summoned ◆");
   }
 }
 
@@ -2406,14 +3063,14 @@ function removeActiveModel() {
   const target = select.value;
   
   if(modelHistory.length <= 1) {
-    showToast("Cannot purge the last remaining engine");
+    showToast("Cannot purge the last remaining engine ◆");
     return;
   }
 
   modelHistory = modelHistory.filter(m => m !== target);
   localStorage.setItem('nq_model_history', JSON.stringify(modelHistory));
   renderModelSelect();
-  showToast("Purged to the Abyss");
+  showToast("Purged to the Abyss ◆");
 }
 
 function openSettingsModal(){
@@ -2429,10 +3086,9 @@ function openSettingsModal(){
 function closeOverlay(){
   document.getElementById("cosm-overlay").classList.remove("active");
   ['folder-modal','rename-modal','move-modal',
- 'global-search-modal','capture-modal','settings-modal',
- 'burn-disc-modal','role-modal','persona-select-modal'
+ 'global-search-modal','capture-modal','discourse-modal','settings-modal',
+ 'burn-disc-modal','data-modal','role-modal','persona-select-modal'
   ].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("visible");});
-  mgmtItem=null;
 }
 
 /* EDITOR */
@@ -2546,35 +3202,35 @@ async function exportDiscourseHTML(id){
   const a=document.createElement('a');
   a.href=url;a.download=`${(d.title||'discourse').replace(/[^a-z0-9]/gi,'_').toLowerCase()}.html`;
   a.click();URL.revokeObjectURL(url);
-  showToast('Exported ✓');
+  showToast('Exported ◆');
 }
 
 /* EXPORTS */
-async function exportMarkdown(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported as Markdown");}
+async function exportMarkdown(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported as Markdown ◆");}
 async function exportPDF(){if(!currentDiscourseId)return;await saveCurrentDiscourse(true);const d=await getDiscourse(currentDiscourseId);if(!d)return;const tile=await getMosaicTile(currentDiscourseId);let mh="";if(tile&&tile.anchors&&tile.anchors.length)mh=`<div style="border-left:3px solid #c8a050;padding:10px 16px;margin:16px 0;background:#f9f5ee;"><div style="font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:8px;color:#8a6e35;">◈ MOSAIC</div>${tile.anchors.map(a=>`<div style="margin:4px 0;">• ${escHtml(a)}</div>`).join('')}</div>`;const content=renderContent(d.raw_text||"");const fh=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(d.title||"Discourse")}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:0 auto;padding:20px;color:#1a1a1a;line-height:1.8;}h1{font-size:26px;border-bottom:1px solid #ddd;padding-bottom:10px;margin-bottom:6px;}.meta{font-size:12px;color:#888;margin-bottom:24px;}h2{font-size:20px;}h3{font-size:16px;color:#555;}pre{background:#f4f4f4;padding:14px;border-radius:6px;overflow-x:auto;}code{font-family:monospace;font-size:13px;}blockquote{border-left:3px solid #ccc;padding-left:14px;color:#666;font-style:italic;margin:12px 0;}</style></head><body><h1>${escHtml(d.title||"Untitled")}</h1><div class="meta">${new Date(d.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</div>${mh}${content}</body></html>`;const iframe=document.createElement('iframe');iframe.style.cssText='position:absolute;width:0;height:0;border:none;';document.body.appendChild(iframe);const doc=iframe.contentWindow.document;doc.open();doc.write(fh);doc.close();setTimeout(()=>{iframe.contentWindow.focus();iframe.contentWindow.print();setTimeout(()=>document.body.removeChild(iframe),10000);},500);}
 async function exportDiscourseMarkdown(id){const d=await getDiscourse(id);if(!d)return;const tile=await getMosaicTile(id);let md=`# ${d.title}\n\n`;if(tile&&tile.anchors&&tile.anchors.length)md+=`> **Mosaic**\n${tile.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${(d.title||"discourse").replace(/[^a-z0-9]/gi,"_").toLowerCase()}.md`;a.click();URL.revokeObjectURL(url);showToast("Exported");}
-async function exportFolderContents(fId){const discs=(await dbGetByIndex("cosm_discourses","folder_id",fId)).filter(d=>!d.isDeleted);if(!discs.length){showToast("No discourses to export");return;}let md=`# Folder Export\n\n`;for(const d of discs){const t=await getMosaicTile(d.id);md+=`## ${d.title}\n\n`;if(t&&t.anchors&&t.anchors.length)md+=`> **Mosaic**\n${t.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";md+=`\n\n---\n\n`;}const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`folder_export_${new Date().toISOString().slice(0,10)}.md`;a.click();URL.revokeObjectURL(url);showToast(`Exported ${discs.length} discourse(s)`);}
-async function exportJSON(){const f=await dbGetAll("cosm_folders"),d=await dbGetAll("cosm_discourses"),m=await dbGetAll("cosm_mosaic_tiles"),b=await dbGetAll("cosm_backlinks"),c=await dbGetAll("characters"),h=await dbGetAll("history"),s=await dbGetAll("summaries");const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:f,cosm_discourses:d,cosm_mosaic_tiles:m,cosm_backlinks:b,characters:c,history:h,summaries:s};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`NQ_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("Backup exported ✓");}
+async function exportFolderContents(fId){const discs=(await dbGetByIndex("cosm_discourses","folder_id",fId)).filter(d=>!d.isDeleted);if(!discs.length){showToast("No discourses to export ◆");return;}let md=`# Folder Export\n\n`;for(const d of discs){const t=await getMosaicTile(d.id);md+=`## ${d.title}\n\n`;if(t&&t.anchors&&t.anchors.length)md+=`> **Mosaic**\n${t.anchors.map(a=>`> - ${a}`).join('\n')}\n\n`;md+=d.raw_text||" ";md+=`\n\n---\n\n`;}const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`folder_export_${new Date().toISOString().slice(0,10)}.md`;a.click();URL.revokeObjectURL(url);showToast(`Exported ${discs.length} discourse(s)`);}
+async function exportJSON(){const f=await dbGetAll("cosm_folders"),d=await dbGetAll("cosm_discourses"),m=await dbGetAll("cosm_mosaic_tiles"),b=await dbGetAll("cosm_backlinks"),c=await dbGetAll("characters"),h=await dbGetAll("history"),s=await dbGetAll("summaries");const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:f,cosm_discourses:d,cosm_mosaic_tiles:m,cosm_backlinks:b,characters:c,history:h,summaries:s};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`NQ_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("Backup exported ◆");}
 async function importJSON(event){const file=event.target.files[0];if(!file)return;if(!confirm("Import will merge with existing data. Continue?")){event.target.value='';return;}try{const text=await file.text();const payload=JSON.parse(text);const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store]))for(const item of payload[store])await dbPut(store,item);}mosaicCache={};if(currentMode==='soup')await renderTableView();else await renderSanctuaryView();showToast("Import complete ✓");}catch(err){console.error(err);showToast("Import failed");}event.target.value='';}
 
 /* MOSAIC EXTRACT */
 async function extractMemory(){
-  if(!currentDiscourseId)return;const rawText=document.getElementById("content-textarea").value.trim();if(!rawText||rawText.length<50){showToast("Write more before extracting");return;}
+  if(!currentDiscourseId)return;const rawText=document.getElementById("content-textarea").value.trim();if(!rawText||rawText.length<50){showToast("Write more before extracting ◆");return;}
   const key=localStorage.getItem("nexus_v7_key")||localStorage.getItem("nq_api_key")||"";if(!key){showToast("Add OpenRouter key in Settings");return;}
   document.getElementById("extract-loading").classList.add("visible");
   try{const res=await fetch("https://openrouter.ai/api/v1/chat/completions",{method:"POST",headers:{"Authorization":`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({model:localStorage.getItem("activeModel_v1")||localStorage.getItem("nq_model")||"deepseek/deepseek-v4-flash",max_tokens:350,messages:[{role:"system",content:`You are a conceptual anchor extractor. Read the text and return exactly 4-6 anchor phrases. Format: one per line, \"Category: brief anchor phrase\". Categories: Core tension, Open question, Key concept, Hidden assumption, Named force, Recurring image. Reply with ONLY the list.`},{role:"user",content:rawText.slice(0,3000)}]})});
-  const data=await res.json();const raw=data.choices?.[0]?.message?.content||"";if(!raw.trim()){showToast("Nothing extracted");return;}
+  const data=await res.json();const raw=data.choices?.[0]?.message?.content||"";if(!raw.trim()){showToast("Nothing extracted ◆");return;}
   const anchors=raw.split("\n").map(l=>l.trim()).filter(l=>l.length>3&&!l.startsWith("#"));
-  await saveMosaicTile(currentDiscourseId,anchors);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic anchored ◈");
-  }catch(err){console.error(err);showToast("Extraction failed");}
+  await saveMosaicTile(currentDiscourseId,anchors);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic anchored ◆");
+  }catch(err){console.error(err);showToast("Extraction failed ◆");}
   finally{document.getElementById("extract-loading").classList.remove("visible");}
 }
 
-async function confirmDeleteMosaic(){if(!currentDiscourseId)return;if(!confirm("Clear mosaic anchors?"))return;await deleteMosaicTile(currentDiscourseId);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic cleared");}
+async function confirmDeleteMosaic(){if(!currentDiscourseId)return;if(!confirm("Clear mosaic anchors?"))return;await deleteMosaicTile(currentDiscourseId);await renderMosaicDisplay(currentDiscourseId);showToast("Mosaic cleared ◆");}
 
 /* AKASHIC */
-async function backupToAkashic(){try{const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:await dbGetAll("cosm_folders"),cosm_discourses:await dbGetAll("cosm_discourses"),cosm_mosaic_tiles:await dbGetAll("cosm_mosaic_tiles"),cosm_backlinks:await dbGetAll("cosm_backlinks"),characters:await dbGetAll("characters"),history:await dbGetAll("history"),summaries:await dbGetAll("summaries")};const res=await fetch(`${AKASHIC_URL}/backup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:cosmUserId,data:JSON.stringify(payload)})});if(res.ok)showToast('Akashic Synced ◈');}catch(e){console.error(e);}}
-async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will overwrite local fragments."))return;try{const res=await fetch(`${AKASHIC_URL}/backup/latest?user_id=${cosmUserId}`);if(!res.ok)throw new Error('No backup');const payload=JSON.parse(await res.text());const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store])){const all=await dbGetAll(store);for(const item of all)await dbDelete(store,item.id);for(const item of payload[store])await dbPut(store,item);}}showToast('Sanctuary Restored ◈');setTimeout(()=>location.reload(),1200);}catch(e){console.error(e);showToast('Akashic offline');}}
+async function backupToAkashic(){try{const payload={version:"NakedQuantum",exported_at:new Date().toISOString(),cosm_folders:await dbGetAll("cosm_folders"),cosm_discourses:await dbGetAll("cosm_discourses"),cosm_mosaic_tiles:await dbGetAll("cosm_mosaic_tiles"),cosm_backlinks:await dbGetAll("cosm_backlinks"),characters:await dbGetAll("characters"),history:await dbGetAll("history"),summaries:await dbGetAll("summaries")};const res=await fetch(`${AKASHIC_URL}/backup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:cosmUserId,data:JSON.stringify(payload)})});if(res.ok)showToast('Akashic Synced ◆');}catch(e){console.error(e);}}
+async function restoreFromAkashic(){if(!confirm("Pull from Akashic? This will overwrite local fragments."))return;try{const res=await fetch(`${AKASHIC_URL}/backup/latest?user_id=${cosmUserId}`);if(!res.ok)throw new Error('No backup');const payload=JSON.parse(await res.text());const stores=['cosm_folders','cosm_discourses','cosm_mosaic_tiles','cosm_backlinks','characters','history','summaries'];for(const store of stores){if(payload[store]&&Array.isArray(payload[store])){const all=await dbGetAll(store);for(const item of all)await dbDelete(store,item.id);for(const item of payload[store])await dbPut(store,item);}}showToast('Sanctuary Restored ◆');setTimeout(()=>location.reload(),1200);}catch(e){console.error(e);showToast('Akashic offline ◆');}}
 
 /* LONG PRESS */
 function startLP(e,card,item){
@@ -2585,9 +3241,7 @@ function startLP(e,card,item){
   longPressTimer=setTimeout(()=>{
     isLongPress=true;longPressConsumed=true;
     card.classList.remove('long-pressing');
-    card.classList.add('card-selected'); 
-    mgmtItem=item;
-    openManagementModal(item);
+    enterSelectMode(item);
   },LONG_PRESS_DURATION);
 }
 
@@ -2690,7 +3344,7 @@ async function handleSync() {
     }
 
     localStorage.setItem('nq_last_sync', Date.now().toString());
-    showToast("◈ Abyss Synchronized");
+    showToast("Abyss Synchronized ◆");
     
     if(currentMode === 'soup') await renderTableView();
     else await renderSanctuaryView();
@@ -2706,7 +3360,6 @@ async function handleSync() {
 /* EVENT BINDING */
 document.addEventListener('DOMContentLoaded',()=> {
 initWorker();
-  document.getElementById('btn-close-void').addEventListener('click',()=>goBack());
   document.getElementById('btn-purge-all').addEventListener('click',purgeAll);
   document.getElementById('btn-back-table').addEventListener('click',()=>goBack());
   document.getElementById('btn-write').addEventListener('click',()=>setEditorMode('write'));
@@ -2722,24 +3375,15 @@ initWorker();
   document.getElementById('search-input').addEventListener('input',e=>onSearchInput(e.target.value));
   document.getElementById('discourse-title').addEventListener('blur',()=>{if(currentDiscourseId&&currentView==='lighthouse')saveCurrentDiscourse(true);});
   document.getElementById('content-textarea').addEventListener('paste',function(e){const h=e.clipboardData&&e.clipboardData.getData('text/html');if(h){e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));}});
-
-document.addEventListener('click',e=>{
-  if(!mgmtItem)return;
-  const bar=document.getElementById('bottom-bar');
-  const overlay=document.getElementById('cosm-overlay');
-  if(bar&&!bar.contains(e.target)&&overlay&&!overlay.classList.contains('active')){
-    resetToDefaultBar();
-  }
-});
-
   document.getElementById('btn-rename-cancel').addEventListener('click',closeOverlay);
   document.getElementById('btn-rename-confirm').addEventListener('click',confirmRename);
-  document.getElementById('btn-move-cancel').addEventListener('click',closeMoveModal);
+  document.getElementById('btn-move-cancel').addEventListener('click',closeOverlay);
   document.getElementById('btn-move-confirm').addEventListener('click',()=>{
-  if(selectMode)confirmBatchMove();
-  else confirmMove();
+  confirmBatchMove();
 });
-
+document.getElementById('btn-data-export').addEventListener('click',()=>{closeOverlay();showToast('Exporting...');exportJSON();});
+document.getElementById('import-json-input').onchange=e=>{closeOverlay();importJSON(e);};
+document.getElementById('btn-data-cancel').addEventListener('click',closeOverlay);
   document.getElementById('btn-global-search-cancel').addEventListener('click',closeGlobalSearch);
   document.getElementById('global-search-input').addEventListener('input',e=>onGlobalSearchInput(e.target.value));
   document.getElementById('capture-folder').addEventListener('change',function(){const inp=document.getElementById('capture-new-folder-input');inp.style.display=this.value==='__new__'?'block':'none';if(this.value==='__new__')setTimeout(()=>inp.focus(),50);});
@@ -2747,11 +3391,17 @@ document.addEventListener('click',e=>{
   document.getElementById('btn-capture-confirm').addEventListener('click',confirmQuickCapture);
   document.getElementById('capture-body').addEventListener('input',function(){const t=document.getElementById('capture-title');if(t.dataset.userEdited==='true')return;const w=this.value.split('\n')[0].trim().split(/\s+/).filter(Boolean).slice(0,4).join(' ');t.value=w||'';});
   document.getElementById('capture-title').addEventListener('input',function(){this.dataset.userEdited='true';});
-
-document.getElementById('btn-burn-cancel').addEventListener('click',closeOverlay);
-document.getElementById('btn-burn-confirm').addEventListener('click',confirmBurnDisc);
-
-document.getElementById('btn-settings-confirm').addEventListener('click', () => {
+  document.getElementById('btn-discourse-modal-cancel').addEventListener('click',closeOverlay);
+  document.getElementById('btn-discourse-modal-confirm').addEventListener('click',confirmNewDiscourse);
+  document.getElementById('discourse-modal-folder').addEventListener('change',function(){
+  const inp=document.getElementById('discourse-modal-new-folder');
+  inp.style.display=this.value==='__new__'?'block':'none';
+  if(this.value==='__new__')setTimeout(()=>inp.focus(),50);
+});
+  document.getElementById('btn-burn-cancel').addEventListener('click',closeOverlay);
+  document.getElementById('btn-burn-confirm').addEventListener('click',confirmBurnDisc);
+  document.getElementById('btn-settings-confirm').addEventListener('click', () => {
+  
   localStorage.setItem('nq_api_key', document.getElementById('input-api-key').value.trim());
   localStorage.setItem('nq_base_url', document.getElementById('input-base-url').value.trim());
   localStorage.setItem('nq_model', document.getElementById('input-model').value); 
@@ -2759,31 +3409,21 @@ document.getElementById('btn-settings-confirm').addEventListener('click', () => 
   localStorage.setItem('nq_supa_key', document.getElementById('input-supa-key').value.trim());
 
   closeOverlay();
-  showToast("Gateway Solidified");
+  showToast("Gateway Solidified ◆");
 });
-
   document.getElementById('btn-forge-save').addEventListener('click',saveCharacterForge);
   document.getElementById('btn-forge-close').addEventListener('click',closeCharacterForge);
-document.getElementById('btn-role-cancel').addEventListener('click',closeOverlay);
-document.getElementById('btn-role-confirm').addEventListener('click',confirmAddRole);
-  document.getElementById('btn-persona-back').addEventListener('click',()=>{
-  showPanel('view-sanctuary');
-  renderSanctuaryView();
-});
-document.getElementById('btn-save-persona').addEventListener('click',savePersonaPage);
-document.getElementById('btn-add-role').addEventListener('click',addNewRole);
-document.getElementById('chat-persona-pill').addEventListener('click',openPersonaPillSelector);
-document.getElementById('btn-persona-select-cancel').addEventListener('click',closeOverlay);
-
-document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
+  document.getElementById('btn-role-cancel').addEventListener('click',closeOverlay);
+  document.getElementById('btn-role-confirm').addEventListener('click',confirmAddRole);
+  document.getElementById('btn-save-persona').addEventListener('click',savePersonaPage);
+  document.getElementById('btn-add-role').addEventListener('click',addNewRole);
+  document.getElementById('chat-persona-pill').addEventListener('click',openPersonaPillSelector);
+  document.getElementById('btn-persona-select-cancel').addEventListener('click',closeOverlay);
+  document.getElementById('forge-temp').addEventListener('input',e=>{document.getElementById('forge-temp-val').textContent=parseFloat(e.target.value).toFixed(1);});
   document.querySelectorAll('.forge-section-header').forEach(h=>{h.addEventListener('click',()=>{h.parentElement.classList.toggle('open');});});
-
-  document.getElementById('btn-chat-back').addEventListener('click',()=>goBack());
-document.getElementById('btn-save-memory').addEventListener('click',()=>openMemoryView());
-
-document.getElementById('btn-memory-back').addEventListener('click',()=>{showPanel('view-chat');});
-document.getElementById('btn-add-manual-memory').addEventListener('click',addManualAnchor);
-
+  document.getElementById('btn-save-memory').addEventListener('click',()=>openMemoryView());
+  document.getElementById('btn-memory-back').addEventListener('click',()=>{showPanel('view-chat');});
+  document.getElementById('btn-add-manual-memory').addEventListener('click',addManualAnchor);
   document.getElementById('btn-chat-edit').addEventListener('click',()=>openCharacterForge(activeCharId));
   document.getElementById('btn-chat-clear').addEventListener('click',clearChatHistory);
   document.getElementById('btn-send').addEventListener('click',handleChatSend);
@@ -2802,7 +3442,24 @@ document.getElementById('btn-add-manual-memory').addEventListener('click',addMan
       if(el) el.addEventListener('click',()=>applyFormat(fmtMap[id]));
   });
 
-  document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goBack();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
+document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goBack();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
+  document.getElementById('gold-line-trigger').addEventListener('touchstart', awakenGoldLine, {passive: true});
+  // Awaken the thread on movement
+  const soupView = document.getElementById('view-soup');
+  soupView.addEventListener('scroll', awakenGoldLine, {passive: true});
+  soupView.addEventListener('touchstart', awakenGoldLine, {passive: true});
+
+// Trigger Lineage from the gold line trigger you added
+  const trigger = document.getElementById('gold-line-trigger');
+  if (trigger) {
+    trigger.addEventListener('click', openLineage);
+  }
+
+  // Close Lineage when tapping the background overlay
+  document.getElementById('lineage-overlay').addEventListener('click', closeLineage);
+  
+  // Initial draw
+  renderGoldTicks();
   
   // Final boot trigger with Gatekeeper
   async function bootApp() {
