@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="NakedQuantum">
 <link rel="manifest" href="/manifest.json">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NakedQuantum v0.25.3</title>
+<title>NakedQuantum v0.26.2</title>
 <style>
 :root {
   --bg: #000000;
@@ -186,6 +186,96 @@ button:active { opacity: 0.7; transform: scale(0.97); transition: transform 0.08
   50%  { opacity: 0.12; transform: translate(var(--mx), var(--my)); }
   85%  { opacity: 0.18; }
   100% { opacity: 0; transform: translate(0px, 0px); }
+}
+
+/* WATCHER LOADING DOT */
+.watcher-loading-dot {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(200,160,80,0.5);
+  z-index: 1010;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+.watcher-loading-dot.visible {
+  opacity: 0.5;
+  animation: watcherLoadPulse 2s ease-in-out infinite;
+}
+@keyframes watcherLoadPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* WATCHER GOLD DOT & PANEL */
+.watcher-dot {
+  position: fixed;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(200,160,80,0.6), 0 0 4px rgba(200,160,80,0.9);
+  z-index: 600;
+  pointer-events: auto;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: opacity, transform;
+}
+.watcher-dot.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+.watcher-dot.pulsing {
+  animation: watcherDotPulse 2.4s ease-in-out infinite;
+}
+@keyframes watcherDotPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(200,160,80,0.6), 0 0 4px rgba(200,160,80,0.9); }
+  50% { box-shadow: 0 0 24px rgba(200,160,80,0.9), 0 0 8px rgba(200,160,80,1), 0 0 40px rgba(200,160,80,0.3); }
+}
+
+.watcher-panel {
+  position: fixed;
+  background: rgba(10,10,10,0.96);
+  border: 1px solid var(--accent-dim);
+  border-radius: 14px;
+  padding: 14px;
+  z-index: 700;
+  max-width: 260px;
+  min-width: 200px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
+  transform: scale(0.92) translateY(6px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.34,1.2,0.64,1);
+}
+.watcher-panel.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+.watcher-panel-title {
+  font-size: 9px; letter-spacing: 3px; color: var(--accent); font-weight: 900;
+  text-transform: uppercase; margin-bottom: 10px; opacity: 0.7;
+}
+.watcher-link-item {
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+  margin-bottom: 5px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.watcher-link-item:active { background: var(--surface2); border-color: var(--accent-dim); }
+.watcher-link-title {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.watcher-link-score {
+  font-size: 9px; color: var(--accent-dim); letter-spacing: 1px; margin-top: 2px;
 }
 
 /* DEEP SOUP VIEW */
@@ -491,6 +581,7 @@ select.cosm-input {
 .bar-pill.danger { border-color: var(--danger); }
 
 </style>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.15.0/dist/transformers.min.js">
 </head>
 <body>
 <canvas id="firefly-canvas"></canvas>
@@ -864,7 +955,15 @@ select.cosm-input {
       <button onclick="backupToAkashic()" style="background:var(--surface2); color:var(--text); border:1px solid var(--border); flex:1; height:40px; border-radius:8px; font-weight:700; font-size:11px;">Push to R2</button>
       <button onclick="restoreFromAkashic()" style="background:#1a0000; color:var(--danger); border:1px solid #330000; flex:1; height:40px; border-radius:8px; font-weight:900; font-size:11px;">Pull from R2</button>
     </div>
+    </div>
+<div class="settings-group" style="margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+  <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">◈ The Watcher</label>
+  <div id="watcher-status" style="margin:10px 0 0; display:flex; align-items:center; gap:8px;">
+    <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);flex-shrink:0;" id="watcher-dot-indicator"></span>
+    <span style="font-size:11px;color:var(--text);font-family:Georgia,serif;" id="watcher-status-text">slumbering</span>
   </div>
+  <p style="font-size:9px;color:var(--muted);margin:6px 0 0 18px;" id="watcher-detail"></p>
+</div>
 
   <div class="modal-buttons" style="margin-top:25px;">
     <button class="modal-btn-cancel" onclick="closeOverlay()">Cancel</button>
@@ -1174,6 +1273,346 @@ function initWorker(){
   });
 }
 
+/* ── WATCHER ENGINE (MAIN THREAD SHADOW QUEUE) ──────────────── */
+const W_MODEL_ID = 'Xenova/bge-base-en-v1.5';
+const W_SIMILARITY_THRESHOLD = 0.82;
+const W_DECAY_ACTIVE_DAYS = 25;
+const W_LINK_EXPIRY_DAYS = 60;
+const W_SILENT_PERIOD_HOURS = 48;
+const W_TITLE_WEIGHT = 0.3;
+const W_BODY_WEIGHT = 0.7;
+const W_SPARK_BOOST = 1.1;
+const W_DAY_MS = 86400000;
+
+let watcherEmbedder = null;
+let watcherDB = null;
+let isWatcherReady = false;
+let watcherQueue = [];
+let isWatcherProcessing = false;
+
+function openWatcherDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('nq_watcher', 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('embeddings')) {
+        const emb = db.createObjectStore('embeddings', { keyPath: 'id' });
+        emb.createIndex('last_seen_active', 'last_seen_active', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('links')) {
+        const lnk = db.createObjectStore('links', { keyPath: 'id' });
+        lnk.createIndex('created_at', 'created_at', { unique: false });
+        lnk.createIndex('a', 'a', { unique: false });
+        lnk.createIndex('b', 'b', { unique: false });
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+const wdb = {
+  get: (store, key) => new Promise((res) => { const r = watcherDB.transaction(store, 'readonly').objectStore(store).get(key); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }),
+  put: (store, obj) => new Promise((res, rej) => { const r = watcherDB.transaction(store, 'readwrite').objectStore(store).put(obj); r.onsuccess = () => res(); r.onerror = (e) => rej(e.target.error); }),
+  delete: (store, key) => new Promise((res) => { const r = watcherDB.transaction(store, 'readwrite').objectStore(store).delete(key); r.onsuccess = () => res(); r.onerror = () => res(); }),
+  getAll: (store) => new Promise((res) => { const r = watcherDB.transaction(store, 'readonly').objectStore(store).getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => res([]); }),
+  deleteOlderThan: (store, indexName, cutoff) => new Promise((res) => {
+    const range = IDBKeyRange.upperBound(cutoff);
+    const req = watcherDB.transaction(store, 'readwrite').objectStore(store).index(indexName).openCursor(range);
+    req.onsuccess = (e) => { const cursor = e.target.result; if (cursor) { cursor.delete(); cursor.continue(); } else res(); };
+    req.onerror = () => res();
+  })
+};
+
+async function watcherSha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function watcherCosine(a, b) {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; normA += a[i] * a[i]; normB += b[i] * b[i]; }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+function showWatcherLoading() {
+  const dot = document.getElementById('watcher-loading-dot');
+  if (dot) { dot.style.display = 'block'; void dot.offsetWidth; dot.classList.add('visible'); }
+}
+
+function hideWatcherLoading() {
+  const dot = document.getElementById('watcher-loading-dot');
+  if (dot) { dot.classList.remove('visible'); setTimeout(() => { dot.style.display = 'none'; }, 1000); }
+}
+
+function updateWatcherLoading(loaded, total) {
+  const dot = document.getElementById('watcher-loading-dot');
+  if (dot) dot.style.opacity = 0.3 + (loaded / Math.max(total, 1)) * 0.7;
+}
+
+async function updateWatcherStatusUI() {
+  if (!watcherDB) return;
+  const embs = await wdb.getAll('embeddings');
+  const links = await wdb.getAll('links');
+  const rich = embs.filter(e => (e.word_count || 0) >= 80);
+  const dot = document.getElementById('watcher-dot-indicator');
+  const text = document.getElementById('watcher-status-text');
+  const detail = document.getElementById('watcher-detail');
+  
+  if (!text) return;
+  
+  if (embs.length === 0) {
+    if (dot) dot.style.opacity = '0.3';
+    text.textContent = 'Slumbering';
+    if (detail) detail.textContent = 'Waiting for enough material to observe';
+  } else if (rich.length < 5) {
+    if (dot) dot.style.opacity = '0.6';
+    text.textContent = 'Accumulating';
+    if (detail) detail.textContent = rich.length + ' Deep · ' + embs.length + ' Total · threshold not met';
+  } else {
+    if (dot) dot.style.opacity = '1';
+    text.textContent = 'Watching';
+    if (detail) detail.textContent = embs.length + ' Engrams · ' + links.length + ' Connections · threshold met';
+  }
+}
+
+async function shouldWatcherShow() {
+  if (!watcherDB) return false;
+  const embs = await wdb.getAll('embeddings');
+  const rich = embs.filter(e => (e.word_count || 0) >= 80);
+  return rich.length >= 5;
+}
+
+async function initWatcher() {
+  try {
+    watcherDB = await openWatcherDB();
+    showWatcherLoading();
+    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.15.0/dist/transformers.min.js');
+    env.useBrowserCache = true;
+    env.allowLocalModels = false;
+    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.15.0/dist/';
+    watcherEmbedder = await pipeline('feature-extraction', W_MODEL_ID, {
+      quantized: true,
+      progress_callback: (progress) => {
+        if (progress.status === 'downloading') {
+          updateWatcherLoading(Math.round((progress.loaded || 0) / 1024 / 1024), Math.round((progress.total || 136 * 1024 * 1024) / 1024 / 1024));
+        }
+      }
+    });
+    isWatcherReady = true;
+const firstAwakening = !localStorage.getItem('nq_watcher_awakened');
+if (firstAwakening) {
+  localStorage.setItem('nq_watcher_awakened', '1');
+  showToast('◈ The Watcher has awakened');
+  // One-time reindex of all existing content
+  setTimeout(async () => {
+    const discs = await getDiscourses();
+    let count = 0;
+    for (const d of discs) {
+      if (d.raw_text && d.raw_text.trim().length > 0) {
+        queueWatcherEmbed(d.id, d.title || 'Untitled', d.raw_text, d.item_type || 'discourse');
+        count++;
+      }
+    }
+    if (count > 0) showToast('◈ Indexing ' + count + ' engrams...');
+  }, 5000);
+}
+hideWatcherLoading();
+updateWatcherStatusUI();
+scheduleWatcherPass();
+  } catch (err) {
+    console.warn('[Watcher] Init Failed:', err);
+    hideWatcherLoading();
+  }
+}
+
+function queueWatcherEmbed(id, title, body, itemType) {
+  if (!isWatcherReady) return;
+  watcherQueue.push({ id, title, body, itemType, lastSeenActive: Date.now() });
+  if (!isWatcherProcessing) processWatcherQueue();
+}
+
+async function processWatcherQueue() {
+  if (isWatcherProcessing || watcherQueue.length === 0) return;
+  isWatcherProcessing = true;
+  while (watcherQueue.length > 0) {
+    const item = watcherQueue.shift();
+    try { await embedDiscourseMain(item.id, item.title, item.body, item.itemType, item.lastSeenActive); }
+    catch (e) { console.warn('Watcher Embed Error', e); }
+    await new Promise(r => setTimeout(r, 250));
+  }
+  updateWatcherStatusUI();
+  refreshWatcherDot(); // NEW
+  isWatcherProcessing = false;
+}
+
+async function embedDiscourseMain(id, title, body, itemType, lastSeenActive) {
+  if (!watcherEmbedder) return;
+  const wordCount = body.trim().split(/\s+/).filter(Boolean).length;
+  const titleText = 'Represent this sentence: ' + title.trim().toLowerCase();
+  const bodyText = 'Represent this sentence: ' + body.trim().toLowerCase().slice(0, 2000);
+  const hash = await watcherSha256(titleText + '|||' + bodyText);
+  const existing = await wdb.get('embeddings', id);
+  if (existing && existing.hash === hash) {
+    await wdb.put('embeddings', { ...existing, last_seen_active: lastSeenActive, word_count: wordCount });
+    return;
+  }
+  const titleEmb = await watcherEmbedder(titleText, { pooling: 'mean', normalize: true });
+  await new Promise(r => setTimeout(r, 10));
+  const bodyEmb = await watcherEmbedder(bodyText, { pooling: 'mean', normalize: true });
+  const tv = titleEmb.data, bv = bodyEmb.data;
+  const combined = new Float32Array(tv.length);
+  for (let i = 0; i < tv.length; i++) combined[i] = W_TITLE_WEIGHT * tv[i] + W_BODY_WEIGHT * bv[i];
+  let norm = 0;
+  for (let i = 0; i < combined.length; i++) norm += combined[i] * combined[i];
+  norm = Math.sqrt(norm);
+  if (norm > 0) for (let i = 0; i < combined.length; i++) combined[i] /= norm;
+  await wdb.put('embeddings', { id, vector: Array.from(combined), hash, created_at: existing ? existing.created_at : Date.now(), last_seen_active: lastSeenActive, item_type: itemType, word_count: wordCount });
+}
+
+async function runSimilarityPassMain() {
+  const now = Date.now();
+  const activeCutoff = now - (W_DECAY_ACTIVE_DAYS * W_DAY_MS);
+  const linkExpiryCutoff = now - (W_LINK_EXPIRY_DAYS * W_DAY_MS);
+  const silentCutoff = now - (W_SILENT_PERIOD_HOURS * 3600000);
+  const allEmbeddings = await wdb.getAll('embeddings');
+  const active = allEmbeddings.filter(e => e.last_seen_active > activeCutoff);
+  if (active.length < 2) return;
+  const setA = active.filter(e => e.last_seen_active > (now - (7 * W_DAY_MS)) && e.created_at < silentCutoff);
+  const setB = active;
+  for (let i = 0; i < setA.length; i++) {
+    const a = setA[i];
+    const vecA = new Float32Array(a.vector);
+    for (let j = 0; j < setB.length; j++) {
+      const b = setB[j];
+      if (a.id === b.id) continue;
+      const score = watcherCosine(vecA, new Float32Array(b.vector));
+      const finalScore = score * (a.item_type === 'note' || b.item_type === 'note' ? W_SPARK_BOOST : 1.0);
+      if (finalScore >= W_SIMILARITY_THRESHOLD) {
+        const linkId = [a.id, b.id].sort().join('_');
+        await wdb.put('links', { id: linkId, a: a.id, b: b.id, score: Math.round(finalScore * 1000) / 1000, created_at: now });
+      }
+    }
+    if (i % 5 === 0) await new Promise(r => setTimeout(r, 20));
+  }
+  await wdb.deleteOlderThan('links', 'created_at', linkExpiryCutoff);
+  for (const e of active) { await wdb.put('embeddings', { ...e, last_seen_active: now }); }
+  localStorage.setItem('nq_watcher_last_pass', now.toString());
+  updateWatcherStatusUI();
+  refreshWatcherDot();
+}
+
+function scheduleWatcherPass() {
+  if (!isWatcherReady) return;
+  const lastRun = parseInt(localStorage.getItem('nq_watcher_last_pass') || '0');
+  const hoursSince = (Date.now() - lastRun) / 3600000;
+  if (hoursSince > 20) {
+    setTimeout(() => runSimilarityPassMain(), 10000);
+  }
+}
+
+/* ── WATCHER GOLD DOT UI ───────────────────────────────────── */
+const WATCHER_ANCHORS = [
+  { top: '72px',  left: '50%'  },
+  { top: '72px',  right: '52px' },
+  { top: '30%',   right: '16px' },
+  { top: '50%',   right: '16px' },
+  { top: '70%',   right: '16px' },
+  { top: '30%',   left: '40px' },
+  { top: '50%',   left: '40px' },
+  { bottom: '90px', left: '50%' },
+];
+
+let _watcherDotAnchor = -1;
+let _watcherHasLinks = false;
+let _watcherCurrentLinks = [];
+
+async function refreshWatcherDot() {
+  if (!watcherDB) return;
+  const show = await shouldWatcherShow();
+  if (!show) { hideWatcherDot(); return; }
+  const allLinks = await wdb.getAll('links');
+  _watcherCurrentLinks = allLinks;
+  _watcherHasLinks = allLinks.length > 0;
+  if (_watcherHasLinks) showWatcherDot();
+  else hideWatcherDot();
+}
+
+function showWatcherDot() {
+  const dot = document.getElementById('watcher-dot');
+  if (!dot) return;
+  let idx;
+  do { idx = Math.floor(Math.random() * WATCHER_ANCHORS.length); }
+  while (idx === _watcherDotAnchor && WATCHER_ANCHORS.length > 1);
+  _watcherDotAnchor = idx;
+  const a = WATCHER_ANCHORS[idx];
+  dot.style.cssText = '';
+  Object.assign(dot.style, a);
+  if (a.left === '50%') dot.style.transform = 'translateX(-50%)';
+  dot.classList.remove('visible', 'pulsing');
+  void dot.offsetWidth;
+  dot.classList.add('visible', 'pulsing');
+}
+
+function hideWatcherDot() {
+  const dot = document.getElementById('watcher-dot');
+  if (!dot) return;
+  dot.classList.remove('visible', 'pulsing');
+}
+
+function teleportWatcherDot() {
+  if (!_watcherHasLinks) return;
+  const dot = document.getElementById('watcher-dot');
+  if (!dot || !dot.classList.contains('visible')) return;
+  dot.style.opacity = '0';
+  setTimeout(() => showWatcherDot(), 400);
+}
+
+async function openWatcherPanel() {
+  const panel = document.getElementById('watcher-panel');
+  const list = document.getElementById('watcher-links-list');
+  if (!panel || !list) return;
+  list.innerHTML = '';
+  if (!_watcherCurrentLinks.length) { hideWatcherDot(); return; }
+  const top5 = [..._watcherCurrentLinks].sort((a,b) => b.score - a.score).slice(0,5);
+  for (const link of top5) {
+    const discA = await getDiscourse(link.a);
+    const discB = await getDiscourse(link.b);
+    if (!discA || !discB) continue;
+    const item = document.createElement('div');
+    item.className = 'watcher-link-item';
+    item.innerHTML = `
+      <div class="watcher-link-title">${escHtml(discA.title || 'Untitled')}</div>
+      <div class="watcher-link-score">↔ ${escHtml(discB.title || 'Untitled')} · ${Math.round(link.score * 100)}%</div>
+    `;
+    item.addEventListener('click', () => { closeWatcherPanel(); openDiscourse(link.a); });
+    list.appendChild(item);
+  }
+  const dot = document.getElementById('watcher-dot');
+  const dotRect = dot?.getBoundingClientRect();
+  if (dotRect) {
+    const top = Math.min(dotRect.top, window.innerHeight - 260);
+    const left = dotRect.left > window.innerWidth / 2 ? dotRect.left - 220 : dotRect.right + 10;
+    panel.style.top = top + 'px';
+    panel.style.left = Math.max(8, left) + 'px';
+  }
+  panel.classList.add('visible');
+}
+
+function closeWatcherPanel() {
+  const panel = document.getElementById('watcher-panel');
+  if (panel) panel.classList.remove('visible');
+}
+
+async function pruneWatcherDiscourse(id) {
+  if (!watcherDB) return;
+  await wdb.delete('embeddings', id);
+  const all = await wdb.getAll('links');
+  for (const link of all) { if (link.a === id || link.b === id) await wdb.delete('links', link.id); }
+  updateWatcherStatusUI();
+}
+
 /* DB HELPERS */
 const dbPut = (s, d) => _workerReady.then(() => new Promise((res, rej) => {
   const msgId = ++_id; _pending[msgId] = { resolve: res, reject: rej };
@@ -1265,7 +1704,8 @@ async function createDiscourse({title="Untitled Discourse", raw_text="", folder_
 
 async function updateDiscourse(id,updates){const disc=await getDiscourse(id);if(!disc)return;const u={...disc,...updates,updated_at:Date.now()};await dbPut("cosm_discourses",u);return u;}
 async function deleteDiscourse(id){const d=await getDiscourse(id);if(!d)return;await dbPut("cosm_discourses",{...d,isDeleted:true,deleted_at:Date.now()});}
-async function purgeDiscourse(id){await dbDelete("cosm_discourses",id);const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",id);for(const x of t)await dbDelete("cosm_mosaic_tiles",x.id);const b=await dbGetByIndex("cosm_backlinks","discourse_id",id);for(const x of b)await dbDelete("cosm_backlinks",x.id);}
+
+async function purgeDiscourse(id){await dbDelete("cosm_discourses",id);if(isWatcherReady) pruneWatcherDiscourse(id);const t=await dbGetByIndex("cosm_mosaic_tiles","discourse_id",id);for(const x of t)await dbDelete("cosm_mosaic_tiles",x.id);const b=await dbGetByIndex("cosm_backlinks","discourse_id",id);for(const x of b)await dbDelete("cosm_backlinks",x.id);}
 async function restoreDiscourse(id){const d=await getDiscourse(id);if(!d)return;const{isDeleted,deleted_at,...rest}=d;await dbPut("cosm_discourses",{...rest,updated_at:Date.now()});}
 
 /* CHARACTERS */
@@ -1412,6 +1852,7 @@ async function init(){
   
   document.getElementById('input-api-key').value=localStorage.getItem('nq_api_key')||'';
   document.getElementById('input-model').value=localStorage.getItem('nq_model')||'deepseek/deepseek-v4-flash';
+  initWatcher();
 }
 
 /*Naked Handle*/
@@ -1514,7 +1955,8 @@ async function confirmBurnDisc(){
   const title=`${char.name} -- ${date}`;
   
   // 1. Await the creation
-  await createDiscourse({title,raw_text,folder_id:folderId});
+  const engramDisc = await createDiscourse({title,raw_text,folder_id:folderId});
+if (isWatcherReady && engramDisc) queueWatcherEmbed(engramDisc.id, title, raw_text, 'discourse');
   
   // 2. Update the burn marker
   localStorage.setItem('lastBurn_'+charId,Date.now().toString());
@@ -1877,6 +2319,7 @@ function showPanel(id){
   else{hideBottomBar();}
   
   firefly.sd(id==='view-lighthouse'||id==='view-chat'?80:20);
+  teleportWatcherDot();
 }
 
 /* HEADER BUTTONS */
@@ -2333,6 +2776,10 @@ async function saveCurrentDiscourse(silent=false){
   await updateDiscourse(currentDiscourseId,{title,raw_text});
   if(!silent)showToast("Saved ◆");
   setTimeout(()=>backupToAkashic(),0);
+  if (isWatcherReady && currentDiscourseId) {
+    const disc = await getDiscourse(currentDiscourseId);
+    if (disc && disc.item_type) queueWatcherEmbed(currentDiscourseId, title, raw_text, disc.item_type);
+  }
 }
 
 async function handleNewDiscourse(){
@@ -2999,6 +3446,7 @@ async function openQuickCapture(){
 }
 
 function closeQuickCapture(){document.getElementById('capture-modal').classList.remove('visible');closeOverlay();}
+
 async function confirmQuickCapture(){
   if(_cs)return;_cs=true;
   try{
@@ -3012,7 +3460,8 @@ async function confirmQuickCapture(){
   const fn=`Unknown_${count}`;
   fId=await createFolder(fn,currentFolderId||null);
   isNF=true;nfn=fn;}
-    const now=Date.now();await dbPut('cosm_discourses',{id:'n_'+now,title,raw_text,folder_id:fId,source_link:null,item_type:'note',created_at:now,updated_at:now});
+    const now=Date.now();const sparkId='n_'+now;await dbPut('cosm_discourses',{id:sparkId,title,raw_text,folder_id:fId,source_link:null,item_type:'note',created_at:now,updated_at:now});
+if(isWatcherReady) queueWatcherEmbed(sparkId, title, raw_text, 'note');
     closeQuickCapture();if(navigator.vibrate)navigator.vibrate(50);
     if(isNF)enterFolder(fId,nfn);else await renderTableView();showToast('Sparked ◆');
   }catch(err){console.error(err);showToast('Spark failed ◆');}finally{_cs=false;}
@@ -3443,6 +3892,14 @@ document.getElementById('btn-data-cancel').addEventListener('click',closeOverlay
   });
 
 document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();if(currentView==='lighthouse')saveCurrentDiscourse();}if(e.key==="Escape"&&currentView==='lighthouse')goBack();if(e.key==="Enter"&&document.getElementById("folder-modal").classList.contains("visible"))confirmNewFolder();if(e.key==="Enter"&&document.getElementById("rename-modal").classList.contains("visible"))confirmRename();if(e.key==="Escape"&&document.getElementById("global-search-modal").classList.contains("visible"))closeGlobalSearch();});
+document.getElementById('watcher-dot')?.addEventListener('click', openWatcherPanel);
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('watcher-panel');
+  const dot = document.getElementById('watcher-dot');
+  if (panel?.classList.contains('visible') && !panel.contains(e.target) && e.target !== dot) {
+    closeWatcherPanel();
+  }
+});
   document.getElementById('gold-line-trigger').addEventListener('touchstart', awakenGoldLine, {passive: true});
   // Awaken the thread on movement
   const soupView = document.getElementById('view-soup');
@@ -3504,8 +3961,17 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 
 window.cosmOSPinDisc=async function({title,raw_text,source_link,backlink}){const disc=await createDiscourse({title,raw_text,source_link:JSON.stringify(source_link)});if(backlink){const blId="bl_"+Date.now();await dbPut("cosm_backlinks",{id:blId,discourse_id:disc.id,...backlink,created_at:Date.now()});}return disc.id;};
 </script>
+
 <div class="bottom-bar" id="bottom-bar">
   <div class="bottom-bar-scroll" id="bottom-bar-scroll"></div>
+</div>
+
+<div class="watcher-loading-dot" id="watcher-loading-dot"></div>
+
+<div class="watcher-dot" id="watcher-dot"></div>
+<div class="watcher-panel" id="watcher-panel">
+  <div class="watcher-panel-title">◈ Resonance</div>
+  <div id="watcher-links-list"></div>
 </div>
 
 </body>
